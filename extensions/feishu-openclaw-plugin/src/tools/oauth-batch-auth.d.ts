@@ -7,6 +7,6 @@
  * 自动识别应用已开通但用户未授权的 scope，一次性发起授权请求。
  * 复用 oauth.ts 的 executeAuthorize() 函数。
  */
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
 export declare function registerFeishuOAuthBatchAuthTool(api: OpenClawPluginApi): void;
 //# sourceMappingURL=oauth-batch-auth.d.ts.map

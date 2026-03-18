@@ -22,10 +22,10 @@
  *     - `"open"` → any sender; `"allowlist"` → check merged list;
  *       `"disabled"` → block all senders
  */
-import { LarkClient } from "../../core/lark-client.js";
-import { sendMessageFeishu } from "../outbound/send.js";
-import { resolveFeishuGroupConfig, resolveFeishuAllowlistMatch, isFeishuGroupAllowed, } from "./policy.js";
-import { mentionedBot } from "./mention.js";
+import { LarkClient } from '../../core/lark-client';
+import { resolveFeishuGroupConfig, resolveFeishuAllowlistMatch, isFeishuGroupAllowed, splitLegacyGroupAllowFrom, resolveGroupSenderPolicyContext, } from './policy';
+import { mentionedBot } from './mention';
+import { sendPairingReply } from './gate-effects';
 /** Prevent spamming the legacy groupAllowFrom migration warning. */
 let legacyGroupAllowFromWarned = false;
 // ---------------------------------------------------------------------------
@@ -37,7 +37,7 @@ let legacyGroupAllowFromWarned = false;
 async function readAllowFromStore(accountId) {
     const core = LarkClient.runtime;
     return await core.channel.pairing.readAllowFromStore({
-        channel: "feishu",
+        channel: 'feishu',
         accountId,
     });
 }
@@ -58,33 +58,32 @@ export { readAllowFromStore as readFeishuAllowFromStore };
  * and send pairing request messages.
  */
 export async function checkMessageGate(params) {
-    const { ctx, feishuCfg, account, cfg, log } = params;
-    const isGroup = ctx.chatType === "group";
+    const { ctx, accountFeishuCfg, account, accountScopedCfg, log } = params;
+    const isGroup = ctx.chatType === 'group';
     if (isGroup) {
-        return checkGroupGate({ ctx, feishuCfg, account, cfg, log });
+        return checkGroupGate({ ctx, accountFeishuCfg, account, accountScopedCfg, log });
     }
-    return checkDmGate({ ctx, feishuCfg, account, cfg, log });
+    return checkDmGate({ ctx, accountFeishuCfg, account, accountScopedCfg, log });
 }
 // ---------------------------------------------------------------------------
 // Internal: group gate
 // ---------------------------------------------------------------------------
 function checkGroupGate(params) {
-    const { ctx, feishuCfg, account, cfg, log } = params;
+    const { ctx, accountFeishuCfg, account, accountScopedCfg, log } = params;
     const core = LarkClient.runtime;
     // ---- Legacy compat: groupAllowFrom with chat_id entries ----
     // Older Feishu configs used groupAllowFrom with chat_ids (oc_xxx) to
     // control which groups are allowed.  The correct semantic (aligned with
     // Telegram) is sender_ids.  Detect and split so both layers still work.
-    const rawGroupAllowFrom = feishuCfg?.groupAllowFrom ?? [];
-    const legacyChatIds = rawGroupAllowFrom.filter((entry) => String(entry).startsWith("oc_"));
-    const senderGroupAllowFrom = rawGroupAllowFrom.filter((entry) => !String(entry).startsWith("oc_"));
+    const rawGroupAllowFrom = accountFeishuCfg?.groupAllowFrom ?? [];
+    const { legacyChatIds, senderAllowFrom: senderGroupAllowFrom } = splitLegacyGroupAllowFrom(rawGroupAllowFrom);
     if (legacyChatIds.length > 0 && !legacyGroupAllowFromWarned) {
         legacyGroupAllowFromWarned = true;
         log(`feishu[${account.accountId}]: ⚠️  groupAllowFrom contains chat_id entries ` +
-            `(${legacyChatIds.join(", ")}). groupAllowFrom is for SENDER filtering ` +
+            `(${legacyChatIds.join(', ')}). groupAllowFrom is for SENDER filtering ` +
             `(open_ids like ou_xxx). Please move chat_ids to "groups" config instead:\n` +
             `  channels.feishu.groups: {\n` +
-            legacyChatIds.map((id) => `    "${id}": {},`).join("\n") +
+            legacyChatIds.map((id) => `    "${id}": {},`).join('\n') +
             `\n  }`);
     }
     // ---- Layer 1: Group-level access (SDK) ----
@@ -93,8 +92,8 @@ function checkGroupGate(params) {
     // - groupPolicy "allowlist" (or groups configured) → only listed groups pass
     // - groupPolicy "disabled" → all groups blocked
     const groupAccess = core.channel.groups.resolveGroupPolicy({
-        cfg: cfg ?? {},
-        channel: "feishu",
+        cfg: accountScopedCfg ?? {},
+        channel: 'feishu',
         groupId: ctx.chatId,
         accountId: account.accountId,
         groupIdCaseInsensitive: true,
@@ -111,21 +110,21 @@ function checkGroupGate(params) {
         const legacyMatch = legacyChatIds.some((id) => String(id).toLowerCase() === chatIdLower);
         if (!legacyMatch) {
             log(`feishu[${account.accountId}]: group ${ctx.chatId} blocked by group-level policy`);
-            return { allowed: false, reason: "group_not_allowed" };
+            return { allowed: false, reason: 'group_not_allowed' };
         }
         legacyGroupAdmit = true;
     }
     // ---- Per-group config (Feishu-specific fields) ----
     const groupConfig = resolveFeishuGroupConfig({
-        cfg: feishuCfg,
+        cfg: accountFeishuCfg,
         groupId: ctx.chatId,
     });
-    const defaultConfig = feishuCfg?.groups?.["*"];
+    const defaultConfig = accountFeishuCfg?.groups?.['*'];
     // Per-group enabled flag
     const enabled = groupConfig?.enabled ?? defaultConfig?.enabled;
     if (enabled === false) {
         log(`feishu[${account.accountId}]: group ${ctx.chatId} disabled by per-group config`);
-        return { allowed: false, reason: "group_disabled" };
+        return { allowed: false, reason: 'group_disabled' };
     }
     // ---- Layer 2: Sender-level access ----
     // Per-group groupPolicy overrides the global groupPolicy for sender filtering.
@@ -134,19 +133,14 @@ function checkGroupGate(params) {
     // Legacy compat: when a group was admitted via old-style chat_id in
     // groupAllowFrom AND there is no explicit per-group sender config,
     // skip sender filtering (old semantic = "group allowed, any sender").
-    const hasExplicitSenderConfig = senderGroupAllowFrom.length > 0 ||
-        (groupConfig?.allowFrom ?? []).length > 0 ||
-        groupConfig?.groupPolicy != null;
+    const hasExplicitSenderConfig = senderGroupAllowFrom.length > 0 || (groupConfig?.allowFrom ?? []).length > 0 || groupConfig?.groupPolicy != null;
     if (!(legacyGroupAdmit && !hasExplicitSenderConfig)) {
-        const senderPolicy = groupConfig?.groupPolicy ??
-            defaultConfig?.groupPolicy ??
-            feishuCfg?.groupPolicy ??
-            "open";
-        const senderAllowFrom = [
-            ...senderGroupAllowFrom,
-            ...(groupConfig?.allowFrom ?? []),
-            ...(!groupConfig && defaultConfig?.allowFrom ? defaultConfig.allowFrom : []),
-        ];
+        const { senderPolicy, senderAllowFrom } = resolveGroupSenderPolicyContext({
+            groupConfig,
+            defaultConfig,
+            accountFeishuCfg,
+            senderGroupAllowFrom,
+        });
         const senderAllowed = isFeishuGroupAllowed({
             groupPolicy: senderPolicy,
             allowFrom: senderAllowFrom,
@@ -155,24 +149,24 @@ function checkGroupGate(params) {
         });
         if (!senderAllowed) {
             log(`feishu[${account.accountId}]: sender ${ctx.senderId} not allowed in group ${ctx.chatId}`);
-            return { allowed: false, reason: "sender_not_allowed" };
+            return { allowed: false, reason: 'sender_not_allowed' };
         }
     }
     // ---- Mention requirement (SDK) ----
     // SDK precedence: per-group > default ("*") > requireMentionOverride > true
     const requireMention = core.channel.groups.resolveRequireMention({
-        cfg: cfg ?? {},
-        channel: "feishu",
+        cfg: accountScopedCfg ?? {},
+        channel: 'feishu',
         groupId: ctx.chatId,
         accountId: account.accountId,
         groupIdCaseInsensitive: true,
-        requireMentionOverride: feishuCfg?.requireMention,
+        requireMentionOverride: accountFeishuCfg?.requireMention,
     });
     if (requireMention && !mentionedBot(ctx)) {
         log(`feishu[${account.accountId}]: message in group ${ctx.chatId} did not mention bot, recording to history`);
         return {
             allowed: false,
-            reason: "no_mention",
+            reason: 'no_mention',
             historyEntry: {
                 sender: ctx.senderId,
                 body: `${ctx.senderName ?? ctx.senderId}: ${ctx.content}`,
@@ -187,20 +181,18 @@ function checkGroupGate(params) {
 // Internal: DM gate
 // ---------------------------------------------------------------------------
 async function checkDmGate(params) {
-    const { ctx, feishuCfg, account, cfg, log } = params;
-    const dmPolicy = feishuCfg?.dmPolicy ?? "pairing";
-    const configAllowFrom = feishuCfg?.allowFrom ?? [];
-    const core = LarkClient.runtime;
-    if (dmPolicy === "disabled") {
+    const { ctx, accountFeishuCfg, account, accountScopedCfg, log } = params;
+    const dmPolicy = accountFeishuCfg?.dmPolicy ?? 'pairing';
+    const configAllowFrom = accountFeishuCfg?.allowFrom ?? [];
+    if (dmPolicy === 'disabled') {
         log(`feishu[${account.accountId}]: DM disabled by policy, rejecting sender ${ctx.senderId}`);
-        return { allowed: false, reason: "dm_disabled" };
+        return { allowed: false, reason: 'dm_disabled' };
     }
-    if (dmPolicy === "open") {
+    if (dmPolicy === 'open') {
         return { allowed: true };
     }
-    if (dmPolicy === "allowlist") {
-        const storeAllowFrom = await readAllowFromStore(account.accountId)
-            .catch(() => []);
+    if (dmPolicy === 'allowlist') {
+        const storeAllowFrom = await readAllowFromStore(account.accountId).catch(() => []);
         const combinedAllowFrom = [...configAllowFrom, ...storeAllowFrom];
         const match = resolveFeishuAllowlistMatch({
             allowFrom: combinedAllowFrom,
@@ -209,13 +201,12 @@ async function checkDmGate(params) {
         });
         if (!match.allowed) {
             log(`feishu[${account.accountId}]: sender ${ctx.senderId} not in DM allowlist`);
-            return { allowed: false, reason: "dm_not_allowed" };
+            return { allowed: false, reason: 'dm_not_allowed' };
         }
         return { allowed: true };
     }
     // dmPolicy === "pairing"
-    const storeAllowFrom = await readAllowFromStore(account.accountId)
-        .catch(() => []);
+    const storeAllowFrom = await readAllowFromStore(account.accountId).catch(() => []);
     const combinedAllowFrom = [...configAllowFrom, ...storeAllowFrom];
     const match = resolveFeishuAllowlistMatch({
         allowFrom: combinedAllowFrom,
@@ -228,28 +219,16 @@ async function checkDmGate(params) {
     // Sender not yet paired — create a pairing request and notify them
     log(`feishu[${account.accountId}]: sender ${ctx.senderId} not paired, creating pairing request`);
     try {
-        const { code } = await core.channel.pairing.upsertPairingRequest({
-            channel: "feishu",
-            id: ctx.senderId,
+        await sendPairingReply({
+            senderId: ctx.senderId,
+            chatId: ctx.chatId,
             accountId: account.accountId,
+            accountScopedCfg,
         });
-        const pairingReply = core.channel.pairing.buildPairingReply({
-            channel: "feishu",
-            idLine: ctx.senderId,
-            code,
-        });
-        if (cfg) {
-            await sendMessageFeishu({
-                cfg,
-                to: ctx.chatId,
-                text: pairingReply,
-                accountId: account.accountId,
-            });
-        }
     }
     catch (err) {
-        log(`feishu[${account.accountId}]: failed to create pairing request: ${String(err)}`);
+        log(`feishu[${account.accountId}]: failed to create pairing request for ${ctx.senderId}: ${String(err)}`);
     }
-    return { allowed: false, reason: "pairing_pending" };
+    return { allowed: false, reason: 'pairing_pending' };
 }
 //# sourceMappingURL=gate.js.map

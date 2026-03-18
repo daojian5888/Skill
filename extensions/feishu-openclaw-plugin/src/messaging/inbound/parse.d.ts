@@ -12,8 +12,8 @@
  * the converter context so that async converters (e.g. merge_forward)
  * can make API calls during parsing.
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { FeishuMessageEvent, MessageContext } from "../types.js";
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { FeishuMessageEvent, MessageContext } from '../types';
 /**
  * Parse a raw Feishu message event into a normalised MessageContext.
  *
@@ -22,6 +22,7 @@ import type { FeishuMessageEvent, MessageContext } from "../types.js";
  *                   to fetch sub-messages and resolve sender names.
  */
 export declare function parseMessageEvent(event: FeishuMessageEvent, botOpenId?: string, expandCtx?: {
+    /** account 级别的 ClawdbotConfig（channels.feishu 已替换为 per-account 合并后的配置） */
     cfg: ClawdbotConfig;
     accountId?: string;
 }): Promise<MessageContext>;

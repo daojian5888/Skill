@@ -9,7 +9,9 @@
  * both the default account (top-level fields) and named accounts
  * (nested under `accounts`).
  */
-import { DEFAULT_ACCOUNT_ID } from "openclaw/plugin-sdk";
+import { DEFAULT_ACCOUNT_ID } from 'openclaw/plugin-sdk';
+import { getLarkAccount, getLarkAccountIds } from '../core/accounts';
+import { collectIsolationWarnings } from '../core/security-check';
 /** Generic Feishu account config merge. */
 function mergeFeishuAccountConfig(cfg, accountId, patch) {
     const isDefault = !accountId || accountId === DEFAULT_ACCOUNT_ID;
@@ -75,5 +77,26 @@ export function deleteAccount(cfg, accountId) {
             },
         },
     };
+}
+/** Collect security warnings for a Feishu account. */
+export function collectFeishuSecurityWarnings(params) {
+    const { cfg, accountId } = params;
+    const warnings = [];
+    const account = getLarkAccount(cfg, accountId);
+    const feishuCfg = account.config;
+    // cfg.channels.defaults is a cross-channel defaults object (not formally typed)
+    const defaultGroupPolicy = cfg.channels?.defaults?.groupPolicy;
+    const groupPolicy = feishuCfg?.groupPolicy ?? defaultGroupPolicy ?? 'allowlist';
+    if (groupPolicy === 'open') {
+        warnings.push(`- Feishu[${account.accountId}] groups: groupPolicy="open" allows any group to interact (mention-gated). To restrict which groups are allowed, set groupPolicy="allowlist" and list group IDs in channels.feishu.groups. To restrict which senders can trigger the bot, set channels.feishu.groupAllowFrom with user open_ids (ou_xxx).`);
+    }
+    // Multi-account cross-tenant isolation check (only on first account to avoid duplicates)
+    const allIds = getLarkAccountIds(cfg);
+    if (allIds.length === 0 || accountId === allIds[0]) {
+        for (const w of collectIsolationWarnings(cfg)) {
+            warnings.push(w);
+        }
+    }
+    return warnings;
 }
 //# sourceMappingURL=config-adapter.js.map

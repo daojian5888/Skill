@@ -2,18 +2,16 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * Fallback converter for unsupported message types.
+ * Fallback converter for unsupported message types.
  */
-export const convertUnknown = (raw, _ctx) => {
-    // Attempt to return something meaningful from the raw content
-    try {
-        const parsed = JSON.parse(raw);
-        if (typeof parsed.text === "string")
-            return { content: parsed.text, resources: [] };
+import { safeParse } from './utils';
+export const convertUnknown = (raw) => {
+    const parsed = safeParse(raw);
+    if (parsed != null && typeof parsed === 'object' && 'text' in parsed) {
+        const text = parsed.text;
+        if (typeof text === 'string')
+            return { content: text, resources: [] };
     }
-    catch {
-        // ignore
-    }
-    return { content: `[unsupported message]`, resources: [] };
+    return { content: '[unsupported message]', resources: [] };
 };
 //# sourceMappingURL=unknown.js.map

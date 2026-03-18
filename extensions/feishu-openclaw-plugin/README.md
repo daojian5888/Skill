@@ -6,6 +6,8 @@
 
 [中文版](./README.zh.md) | English
 
+---
+
 The official Feishu/Lark plugin for OpenClaw, developed and maintained by the Lark Open Platform team. It seamlessly connects your OpenClaw Agent to your Feishu/Lark workspace, empowering it to directly read from and write to messages, documents, sheets, calendars, tasks, and more.
 
 ## Features
@@ -27,6 +29,22 @@ Additionally, the plugin supports:
 - **⚙️ Advanced Group Configuration**: Per-group settings including whitelists, skill bindings, and custom system prompts
 
 For a complete list of features, please see [FEATURES.md](./openclaw/feishu/FEATURES.md).
+
+## Important Security & Risk Warnings (Read Before Use)
+
+**Core Risk:** This plugin connects to your workspace data through Feishu APIs — messages, documents, calendars, contacts. Anything the AI can read has the potential to be exposed. While we've implemented security measures, AI systems are not yet fully mature or stable, so we cannot guarantee absolute security.
+
+**Strong Recommendation:** DO NOT use company/enterprise Feishu accounts at this stage! Please use personal accounts for testing and exploration only.
+
+- This application is intended for personal use only and should NOT be shared with multiple users.
+- Avoid using this plugin in group chats. Since it runs under your personal identity, other members may prompt it into accessing or sending your data, increasing the risk of data leakage.
+
+**Other Operational Risks**
+- AI is not perfect and may experience "hallucinations": It may sometimes misunderstand your intent or generate content that appears reasonable but is inaccurate.
+- Some operations are irreversible: For example, messages sent by the AI on your behalf are sent in your name and become factual once sent.
+- **Mitigation Advice:** For important operations involving sending, modifying, or writing data, please always **"preview first, then confirm"**. Never let the AI operate in a fully autonomous "self-driving" mode without human oversight.
+
+**Disclaimer:** This plugin is provided "as is" without any warranties. Users are solely responsible for any data loss, security breaches, or other damages resulting from the use of this plugin. Please ensure you understand the risks before using this plugin.
 
 ## Requirements & Installation
 

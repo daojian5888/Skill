@@ -2,7 +2,7 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  */
-import { LarkClient } from "../core/lark-client.js";
+import { LarkClient } from '../core/lark-client';
 /**
  * Probe the Feishu bot connection by calling the bot/v3/info API.
  *
@@ -14,7 +14,7 @@ export async function probeFeishu(credentials) {
     if (!credentials?.appId || !credentials?.appSecret) {
         return {
             ok: false,
-            error: "missing credentials (appId, appSecret)",
+            error: 'missing credentials (appId, appSecret)',
         };
     }
     return LarkClient.fromCredentials(credentials).probe();

@@ -2,14 +2,14 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * 飞书工具开发的通用辅助函数
+ * 飞书工具开发的通用辅助函数
  *
-  * 提供所有工具通用的模式，减少重复代码。
+ * 提供所有工具通用的模式，减少重复代码。
  */
-import { getEnabledLarkAccounts, getLarkAccount } from "../core/accounts.js";
-import { LarkClient } from "../core/lark-client.js";
-import { getTraceContext } from "../core/trace.js";
-import { createToolClient } from "../core/tool-client.js";
+import { getEnabledLarkAccounts, getLarkAccount } from '../core/accounts';
+import { LarkClient } from '../core/lark-client';
+import { getTicket } from '../core/lark-ticket';
+import { createToolClient } from '../core/tool-client';
 // ---------------------------------------------------------------------------
 // 客户端管理
 // ---------------------------------------------------------------------------
@@ -17,12 +17,12 @@ import { createToolClient } from "../core/tool-client.js";
  * 获取飞书客户端的标准模式
  *
  * 这是所有工具通用的逻辑：
- * 1. 优先使用 TraceContext 中的 accountId 动态解析账号
- * 2. 如果没有 TraceContext，回退到 accountIndex 指定的账号
+ * 1. 优先使用 LarkTicket 中的 accountId 动态解析账号
+ * 2. 如果没有 LarkTicket，回退到 accountIndex 指定的账号
  * 3. 返回创建好的客户端实例
  *
  * @param config - OpenClaw 配置对象
- * @param accountIndex - 使用第几个账号（默认 0，即第一个），仅在无 TraceContext 时使用
+ * @param accountIndex - 使用第几个账号（默认 0，即第一个），仅在无 LarkTicket 时使用
  * @returns 飞书 SDK 客户端实例
  * @throws 如果没有启用的账号
  *
@@ -44,10 +44,10 @@ import { createToolClient } from "../core/tool-client.js";
  */
 export function createClientGetter(config, accountIndex = 0) {
     return () => {
-        // 优先使用 TraceContext 中的 accountId 进行动态账号解析
-        const traceCtx = getTraceContext();
-        if (traceCtx?.accountId) {
-            const account = getLarkAccount(config, traceCtx.accountId);
+        // 优先使用 LarkTicket 中的 accountId 进行动态账号解析
+        const ticket = getTicket();
+        if (ticket?.accountId) {
+            const account = getLarkAccount(config, ticket.accountId);
             if (account.enabled && account.configured) {
                 return LarkClient.fromAccount(account).sdk;
             }
@@ -55,8 +55,7 @@ export function createClientGetter(config, accountIndex = 0) {
         // 回退：使用 accountIndex 指定的账号
         const accounts = getEnabledLarkAccounts(config);
         if (accounts.length === 0) {
-            throw new Error("No enabled Feishu accounts configured. " +
-                "Please add appId and appSecret in config under channels.feishu");
+            throw new Error('No enabled Feishu accounts configured. ' + 'Please add appId and appSecret in config under channels.feishu');
         }
         if (accountIndex >= accounts.length) {
             throw new Error(`Requested account index ${accountIndex} but only ${accounts.length} accounts available`);
@@ -69,7 +68,7 @@ export function createClientGetter(config, accountIndex = 0) {
 /**
  * 获取当前请求对应的飞书账号信息
  *
- * 优先使用 TraceContext 中的 accountId，回退到第一个启用的账号。
+ * 优先使用 LarkTicket 中的 accountId，回退到第一个启用的账号。
  *
  * @param config - OpenClaw 配置对象
  * @returns 解析后的账号信息
@@ -82,10 +81,10 @@ export function createClientGetter(config, accountIndex = 0) {
  * ```
  */
 export function getFirstAccount(config) {
-    // 优先使用 TraceContext 中的 accountId
-    const traceCtx = getTraceContext();
-    if (traceCtx?.accountId) {
-        const account = getLarkAccount(config, traceCtx.accountId);
+    // 优先使用 LarkTicket 中的 accountId
+    const ticket = getTicket();
+    if (ticket?.accountId) {
+        const account = getLarkAccount(config, ticket.accountId);
         if (account.enabled && account.configured) {
             return account;
         }
@@ -93,8 +92,7 @@ export function getFirstAccount(config) {
     // 回退到第一个启用的账号
     const accounts = getEnabledLarkAccounts(config);
     if (accounts.length === 0) {
-        throw new Error("No enabled Feishu accounts configured. " +
-            "Please add appId and appSecret in config under channels.feishu");
+        throw new Error('No enabled Feishu accounts configured. ' + 'Please add appId and appSecret in config under channels.feishu');
     }
     return accounts[0];
 }
@@ -129,7 +127,7 @@ export function getFirstAccount(config) {
  */
 export function createToolContext(api, toolName, options) {
     if (!api.config) {
-        throw new Error("No config available");
+        throw new Error('No config available');
     }
     const config = api.config;
     const accountIndex = options?.accountIndex ?? 0;
@@ -163,7 +161,7 @@ export function formatToolResult(data, options = {}) {
     return {
         content: [
             {
-                type: "text",
+                type: 'text',
                 text: JSON.stringify(data, null, indent),
             },
         ],
@@ -264,11 +262,11 @@ export function createToolLogger(api, toolName) {
 export function validateRequiredParams(params, requiredFields) {
     const missing = requiredFields.filter((field) => {
         const value = params[field];
-        return value === undefined || value === null || value === "";
+        return value === undefined || value === null || value === '';
     });
     if (missing.length > 0) {
         return {
-            error: `Missing required parameter(s): ${missing.join(", ")}`,
+            error: `Missing required parameter(s): ${missing.join(', ')}`,
             missing,
         };
     }

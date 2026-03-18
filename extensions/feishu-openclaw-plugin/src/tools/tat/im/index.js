@@ -2,10 +2,10 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * IM 工具集
-  * 统一导出所有即时通讯相关工具的注册函数
+ * IM 工具集
+ * 统一导出所有即时通讯相关工具的注册函数
  */
-import { registerFeishuImBotImageTool } from "./resource.js";
+import { registerFeishuImBotImageTool } from './resource';
 /**
  * 注册所有 IM 工具
  *
@@ -14,6 +14,6 @@ import { registerFeishuImBotImageTool } from "./resource.js";
  */
 export function registerFeishuImTools(api) {
     registerFeishuImBotImageTool(api);
-    api.logger.info?.("feishu_im: Registered feishu_im_bot_image");
+    api.logger.info?.('feishu_im: Registered feishu_im_bot_image');
 }
 //# sourceMappingURL=index.js.map

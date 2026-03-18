@@ -38,7 +38,7 @@
  * 4. 调用 API
  * ```
  */
-import { TOOL_SCOPES } from "./tool-scopes.js";
+import { TOOL_SCOPES } from './tool-scopes';
 export { TOOL_SCOPES };
 // ===== 函数：Required Scopes（API 需要的权限）=====
 /**
@@ -75,7 +75,7 @@ export function getRequiredScopesForActions(toolActions) {
     const scopesSet = new Set();
     for (const action of toolActions) {
         const scopes = getRequiredScopes(action);
-        scopes.forEach(scope => scopesSet.add(scope));
+        scopes.forEach((scope) => scopesSet.add(scope));
     }
     return Array.from(scopesSet).sort();
 }
@@ -141,10 +141,8 @@ export function checkAppScopes(toolAction, appGrantedScopes) {
     if (requiredScopes.length === 0) {
         return true;
     }
-    const grantedSet = Array.isArray(appGrantedScopes)
-        ? new Set(appGrantedScopes)
-        : appGrantedScopes;
-    return requiredScopes.every(scope => grantedSet.has(scope));
+    const grantedSet = Array.isArray(appGrantedScopes) ? new Set(appGrantedScopes) : appGrantedScopes;
+    return requiredScopes.every((scope) => grantedSet.has(scope));
 }
 /**
  * 获取应用未开通的 scopes
@@ -162,10 +160,8 @@ export function checkAppScopes(toolAction, appGrantedScopes) {
  */
 export function getMissingAppScopes(toolAction, appGrantedScopes) {
     const requiredScopes = getRequiredScopes(toolAction);
-    const grantedSet = Array.isArray(appGrantedScopes)
-        ? new Set(appGrantedScopes)
-        : appGrantedScopes;
-    return requiredScopes.filter(scope => !grantedSet.has(scope));
+    const grantedSet = Array.isArray(appGrantedScopes) ? new Set(appGrantedScopes) : appGrantedScopes;
+    return requiredScopes.filter((scope) => !grantedSet.has(scope));
 }
 // ===== 函数：User Scope 检查 =====
 /**
@@ -193,10 +189,8 @@ export function checkUserScopes(toolAction, userGrantedScopes) {
     if (requiredScopes.length === 0) {
         return true;
     }
-    const grantedSet = Array.isArray(userGrantedScopes)
-        ? new Set(userGrantedScopes)
-        : userGrantedScopes;
-    return requiredScopes.every(scope => grantedSet.has(scope));
+    const grantedSet = Array.isArray(userGrantedScopes) ? new Set(userGrantedScopes) : userGrantedScopes;
+    return requiredScopes.every((scope) => grantedSet.has(scope));
 }
 /**
  * 获取用户未授权的 scopes
@@ -214,9 +208,7 @@ export function checkUserScopes(toolAction, userGrantedScopes) {
  */
 export function getMissingUserScopes(toolAction, userGrantedScopes) {
     const requiredScopes = getRequiredScopes(toolAction);
-    const grantedSet = Array.isArray(userGrantedScopes)
-        ? new Set(userGrantedScopes)
-        : userGrantedScopes;
-    return requiredScopes.filter(scope => !grantedSet.has(scope));
+    const grantedSet = Array.isArray(userGrantedScopes) ? new Set(userGrantedScopes) : userGrantedScopes;
+    return requiredScopes.filter((scope) => !grantedSet.has(scope));
 }
 //# sourceMappingURL=scope-manager.js.map

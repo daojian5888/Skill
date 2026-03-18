@@ -15,14 +15,14 @@
 // ---------------------------------------------------------------------------
 // Known prefix patterns
 // ---------------------------------------------------------------------------
-const CHAT_PREFIX = "oc_";
-const OPEN_ID_PREFIX = "ou_";
+const CHAT_PREFIX = 'oc_';
+const OPEN_ID_PREFIX = 'ou_';
 // Canonical routing prefixes used inside OpenClaw (not Feishu-native).
-const TAG_CHAT = "chat:";
-const TAG_USER = "user:";
-const TAG_OPEN_ID = "open_id:";
+const TAG_CHAT = 'chat:';
+const TAG_USER = 'user:';
+const TAG_OPEN_ID = 'open_id:';
 // Feishu channel prefix (used by SDK for some routing scenarios).
-const TAG_FEISHU = "feishu:";
+const TAG_FEISHU = 'feishu:';
 // ---------------------------------------------------------------------------
 // Detection
 // ---------------------------------------------------------------------------
@@ -35,12 +35,12 @@ export function detectIdType(id) {
     if (!id)
         return null;
     if (id.startsWith(CHAT_PREFIX))
-        return "chat_id";
+        return 'chat_id';
     if (id.startsWith(OPEN_ID_PREFIX))
-        return "open_id";
+        return 'open_id';
     // Plain alphanumeric strings (no prefix) are treated as tenant user IDs.
     if (/^[a-zA-Z0-9]+$/.test(id))
-        return "user_id";
+        return 'user_id';
     return null;
 }
 // ---------------------------------------------------------------------------
@@ -82,7 +82,7 @@ export function normalizeFeishuTarget(raw) {
  */
 export function formatFeishuTarget(id, type) {
     const resolved = type ?? detectIdType(id);
-    if (resolved === "chat_id")
+    if (resolved === 'chat_id')
         return `${TAG_CHAT}${id}`;
     return `${TAG_USER}${id}`;
 }
@@ -95,11 +95,19 @@ export function formatFeishuTarget(id, type) {
  */
 export function resolveReceiveIdType(id) {
     if (id.startsWith(CHAT_PREFIX))
-        return "chat_id";
+        return 'chat_id';
     if (id.startsWith(OPEN_ID_PREFIX))
-        return "open_id";
+        return 'open_id';
     // Default to open_id for any other pattern (safer for outbound API calls).
-    return "open_id";
+    return 'open_id';
+}
+export function normalizeMessageId(messageId) {
+    if (!messageId)
+        return undefined;
+    const colonIndex = messageId.indexOf(':');
+    if (colonIndex >= 0)
+        return messageId.slice(0, colonIndex);
+    return messageId;
 }
 // ---------------------------------------------------------------------------
 // Quick predicate

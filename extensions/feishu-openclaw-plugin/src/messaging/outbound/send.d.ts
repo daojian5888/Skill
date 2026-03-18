@@ -4,13 +4,13 @@
  *
  * Message sending for the Feishu/Lark channel plugin.
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { FeishuSendResult } from "../types.js";
-import type { MentionInfo } from "../types.js";
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { FeishuSendResult } from '../types';
+import type { MentionInfo } from '../types';
 /**
  * Parameters for sending a text / post message.
  */
-export type SendFeishuMessageParams = {
+export interface SendFeishuMessageParams {
     cfg: ClawdbotConfig;
     /** Target identifier (chat_id, open_id, or user_id). */
     to: string;
@@ -24,11 +24,11 @@ export type SendFeishuMessageParams = {
     accountId?: string;
     /** When true, the reply appears in the thread instead of main chat. */
     replyInThread?: boolean;
-};
+}
 /**
  * Parameters for sending an interactive card message.
  */
-export type SendFeishuCardParams = {
+export interface SendFeishuCardParams {
     cfg: ClawdbotConfig;
     /** Target identifier (chat_id, open_id, or user_id). */
     to: string;
@@ -40,7 +40,7 @@ export type SendFeishuCardParams = {
     accountId?: string;
     /** When true, the reply appears in the thread instead of main chat. */
     replyInThread?: boolean;
-};
+}
 /**
  * Send a text message (rendered as a Feishu "post" with markdown support)
  * to a chat or user.

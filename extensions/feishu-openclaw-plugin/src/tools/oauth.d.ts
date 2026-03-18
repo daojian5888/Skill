@@ -11,15 +11,15 @@
  *
  * Security:
  *   - **Does not** accept a `user_open_id` parameter.  The target user is
- *     always the message sender, obtained from the TraceContext.
+ *     always the message sender, obtained from the LarkTicket.
  *   - Token values are never included in the return payload (AI cannot see
  *     them).
  */
-import type { OpenClawPluginApi, ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { ConfiguredLarkAccount } from "../core/types.js";
-import { getTraceContext } from "../core/trace.js";
+import type { OpenClawPluginApi, ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { ConfiguredLarkAccount } from '../core/types';
+import type { LarkTicket } from '../core/lark-ticket';
 export declare function registerFeishuOAuthTool(api: OpenClawPluginApi): void;
-export type ExecuteAuthorizeParams = {
+export interface ExecuteAuthorizeParams {
     account: ConfiguredLarkAccount;
     senderOpenId: string;
     scope: string;
@@ -32,15 +32,15 @@ export type ExecuteAuthorizeParams = {
     forceAuth?: boolean;
     onAuthComplete?: () => void | Promise<void>;
     cfg: ClawdbotConfig;
-    traceCtx: ReturnType<typeof getTraceContext>;
-};
+    ticket: LarkTicket | undefined;
+}
 /**
  * 执行 OAuth 授权流程（Device Flow）
  * 可被 feishu_oauth 和 feishu_oauth_batch_auth 共享调用
  */
 export declare function executeAuthorize(params: ExecuteAuthorizeParams): Promise<{
     content: Array<{
-        type: "text";
+        type: 'text';
         text: string;
     }>;
     details: unknown;

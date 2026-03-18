@@ -4,6 +4,6 @@
  *
  * Converter for "text" message type.
  */
-import type { ContentConverterFn } from "./types.js";
+import type { ContentConverterFn } from './types';
 export declare const convertText: ContentConverterFn;
 //# sourceMappingURL=text.d.ts.map

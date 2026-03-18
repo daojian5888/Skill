@@ -8,8 +8,8 @@
  * the content converter phase, and builds the payload object spread
  * into the agent envelope.
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { FeishuMediaInfo, ResourceDescriptor } from "../types.js";
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { FeishuMediaInfo, ResourceDescriptor } from '../types';
 /**
  * Download media files based on pre-extracted ResourceDescriptors from
  * the converter phase.

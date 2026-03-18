@@ -2,41 +2,41 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * feishu_calendar_calendar tool -- Manage Feishu calendars.
+ * feishu_calendar_calendar tool -- Manage Feishu calendars.
  *
-  * P0 Actions: list, get, primary
+ * P0 Actions: list, get, primary
  *
-  * Uses the Feishu Calendar API:
-  *   - list:    GET  /open-apis/calendar/v4/calendars
-  *   - get:     GET  /open-apis/calendar/v4/calendars/:calendar_id
-  *   - primary: POST /open-apis/calendar/v4/calendars/primary
+ * Uses the Feishu Calendar API:
+ *   - list:    GET  /open-apis/calendar/v4/calendars
+ *   - get:     GET  /open-apis/calendar/v4/calendars/:calendar_id
+ *   - primary: POST /open-apis/calendar/v4/calendars/primary
  */
-import { Type } from "@sinclair/typebox";
-import { json, createToolContext, assertLarkOk, handleInvokeErrorWithAutoAuth, } from "../helpers.js";
+import { Type } from '@sinclair/typebox';
+import { json, createToolContext, assertLarkOk, handleInvokeErrorWithAutoAuth } from '../helpers';
 // ---------------------------------------------------------------------------
 // Schema
 // ---------------------------------------------------------------------------
 const FeishuCalendarCalendarSchema = Type.Union([
     // LIST
     Type.Object({
-        action: Type.Literal("list"),
+        action: Type.Literal('list'),
         page_size: Type.Optional(Type.Number({
-            description: "Number of calendars to return per page (default: 50, max: 1000)",
+            description: 'Number of calendars to return per page (default: 50, max: 1000)',
         })),
         page_token: Type.Optional(Type.String({
-            description: "Pagination token for next page",
+            description: 'Pagination token for next page',
         })),
     }),
     // GET
     Type.Object({
-        action: Type.Literal("get"),
+        action: Type.Literal('get'),
         calendar_id: Type.String({
-            description: "Calendar ID",
+            description: 'Calendar ID',
         }),
     }),
     // PRIMARY
     Type.Object({
-        action: Type.Literal("primary"),
+        action: Type.Literal('primary'),
     }),
 ]);
 // ---------------------------------------------------------------------------
@@ -46,11 +46,11 @@ export function registerFeishuCalendarCalendarTool(api) {
     if (!api.config)
         return;
     const cfg = api.config;
-    const { toolClient, log } = createToolContext(api, "feishu_calendar_calendar");
+    const { toolClient, log } = createToolContext(api, 'feishu_calendar_calendar');
     api.registerTool({
-        name: "feishu_calendar_calendar",
-        label: "Feishu Calendar Management",
-        description: "【以用户身份】飞书日历管理工具。用于查询日历列表、获取日历信息、查询主日历。Actions: list（查询日历列表）, get（查询指定日历信息）, primary（查询主日历信息）。",
+        name: 'feishu_calendar_calendar',
+        label: 'Feishu Calendar Management',
+        description: '【以用户身份】飞书日历管理工具。用于查询日历列表、获取日历信息、查询主日历。Actions: list（查询日历列表）, get（查询指定日历信息）, primary（查询主日历信息）。',
         parameters: FeishuCalendarCalendarSchema,
         async execute(_toolCallId, params) {
             const p = params;
@@ -60,50 +60,53 @@ export function registerFeishuCalendarCalendarTool(api) {
                     // -----------------------------------------------------------------
                     // LIST CALENDARS
                     // -----------------------------------------------------------------
-                    case "list": {
-                        log.info(`list: page_size=${p.page_size ?? 50}, page_token=${p.page_token ?? "none"}`);
-                        const res = await client.invoke("feishu_calendar_calendar.list", (sdk, opts) => sdk.calendar.calendar.list({
+                    case 'list': {
+                        log.info(`list: page_size=${p.page_size ?? 50}, page_token=${p.page_token ?? 'none'}`);
+                        const res = await client.invoke('feishu_calendar_calendar.list', (sdk, opts) => sdk.calendar.calendar.list({
                             params: {
                                 page_size: p.page_size,
                                 page_token: p.page_token,
                             },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
-                        const calendars = res.data?.calendar_list ?? [];
+                        const data = res.data;
+                        const calendars = data?.calendar_list ?? [];
                         log.info(`list: returned ${calendars.length} calendars`);
                         return json({
                             calendars,
-                            has_more: res.data?.has_more ?? false,
-                            page_token: res.data?.page_token,
+                            has_more: data?.has_more ?? false,
+                            page_token: data?.page_token,
                         });
                     }
                     // -----------------------------------------------------------------
                     // GET CALENDAR
                     // -----------------------------------------------------------------
-                    case "get": {
+                    case 'get': {
                         if (!p.calendar_id) {
                             return json({
                                 error: "calendar_id is required for 'get' action",
                             });
                         }
                         log.info(`get: calendar_id=${p.calendar_id}`);
-                        const res = await client.invoke("feishu_calendar_calendar.get", (sdk, opts) => sdk.calendar.calendar.get({
+                        const res = await client.invoke('feishu_calendar_calendar.get', (sdk, opts) => sdk.calendar.calendar.get({
                             path: { calendar_id: p.calendar_id },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
                         log.info(`get: retrieved calendar ${p.calendar_id}`);
+                        const data = res.data;
                         return json({
-                            calendar: res.data?.calendar ?? res.data,
+                            calendar: data?.calendar ?? res.data,
                         });
                     }
                     // -----------------------------------------------------------------
                     // PRIMARY CALENDAR
                     // -----------------------------------------------------------------
-                    case "primary": {
+                    case 'primary': {
                         log.info(`primary: querying primary calendar`);
-                        const res = await client.invoke("feishu_calendar_calendar.primary", (sdk, opts) => sdk.calendar.calendar.primary({}, opts), { as: "user" });
+                        const res = await client.invoke('feishu_calendar_calendar.primary', (sdk, opts) => sdk.calendar.calendar.primary({}, opts), { as: 'user' });
                         assertLarkOk(res);
-                        const calendars = res.data?.calendars ?? [];
+                        const data = res.data;
+                        const calendars = data?.calendars ?? [];
                         log.info(`primary: returned ${calendars.length} primary calendars`);
                         return json({
                             calendars,
@@ -115,7 +118,7 @@ export function registerFeishuCalendarCalendarTool(api) {
                 return await handleInvokeErrorWithAutoAuth(err, cfg);
             }
         },
-    }, { name: "feishu_calendar_calendar" });
-    api.logger.info?.("feishu_calendar_calendar: Registered feishu_calendar_calendar tool");
+    }, { name: 'feishu_calendar_calendar' });
+    api.logger.info?.('feishu_calendar_calendar: Registered feishu_calendar_calendar tool');
 }
 //# sourceMappingURL=calendar.js.map

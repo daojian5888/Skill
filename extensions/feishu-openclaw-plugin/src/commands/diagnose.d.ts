@@ -9,20 +9,20 @@
  * a structured report that users can share with developers for
  * remote troubleshooting.
  */
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
-type DiagLogger = {
+import type { OpenClawConfig } from 'openclaw/plugin-sdk';
+interface DiagLogger {
     info: (message: string) => void;
     warn: (message: string) => void;
     error: (message: string) => void;
-};
-type CheckStatus = "pass" | "warn" | "fail" | "skip";
-type DiagCheckResult = {
+}
+type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip';
+interface DiagCheckResult {
     name: string;
     status: CheckStatus;
     message: string;
     details?: string;
-};
-type AccountDiagResult = {
+}
+interface AccountDiagResult {
     accountId: string;
     name?: string;
     enabled: boolean;
@@ -30,8 +30,8 @@ type AccountDiagResult = {
     appId?: string;
     brand: string;
     checks: DiagCheckResult[];
-};
-type DiagReport = {
+}
+interface DiagReport {
     timestamp: string;
     environment: {
         nodeVersion: string;
@@ -42,9 +42,9 @@ type DiagReport = {
     accounts: AccountDiagResult[];
     toolsRegistered: string[];
     recentErrors: string[];
-    overallStatus: "healthy" | "degraded" | "unhealthy";
+    overallStatus: 'healthy' | 'degraded' | 'unhealthy';
     checks: DiagCheckResult[];
-};
+}
 export declare function runDiagnosis(params: {
     config: OpenClawConfig;
     logger?: DiagLogger;
@@ -64,7 +64,7 @@ export declare function formatTraceOutput(lines: string[], messageId: string): s
 /**
  * Analyze trace log lines and produce a structured CLI report.
  */
-export declare function analyzeTrace(lines: string[], messageId: string): string;
+export declare function analyzeTrace(lines: string[], _messageId: string): string;
 export declare function formatDiagReportCli(report: DiagReport): string;
 export {};
 //# sourceMappingURL=diagnose.d.ts.map

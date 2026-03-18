@@ -17,10 +17,10 @@
  * - write: 2
  * - other / both read+write: 3 (lowest)
  */
-export function getPermissionPriority(scope) {
+function getPermissionPriority(scope) {
     const lowerScope = scope.toLowerCase();
-    const hasRead = lowerScope.includes("read");
-    const hasWrite = lowerScope.includes("write");
+    const hasRead = lowerScope.includes('read');
+    const hasWrite = lowerScope.includes('write');
     if (hasRead && !hasWrite)
         return 1;
     if (hasWrite && !hasRead)
@@ -31,11 +31,8 @@ export function getPermissionPriority(scope) {
  * Extract the highest-priority permission from a scope list.
  * Returns the permission with the lowest priority number (read > write > other).
  */
-export function extractHighestPriorityScope(scopeList) {
-    return (scopeList
-        .split(",")
-        .sort((a, b) => getPermissionPriority(a) - getPermissionPriority(b))[0] ??
-        "");
+function extractHighestPriorityScope(scopeList) {
+    return scopeList.split(',').sort((a, b) => getPermissionPriority(a) - getPermissionPriority(b))[0] ?? '';
 }
 // ---------------------------------------------------------------------------
 // Permission URL extraction
@@ -50,14 +47,14 @@ export function extractHighestPriorityScope(scopeList) {
 export function extractPermissionGrantUrl(msg) {
     const urlMatch = msg.match(/https:\/\/[^\s]+\/app\/[^\s]+/);
     if (!urlMatch?.[0]) {
-        return "";
+        return '';
     }
     try {
         const url = new URL(urlMatch[0]);
-        const scopeListParam = url.searchParams.get("q") ?? "";
+        const scopeListParam = url.searchParams.get('q') ?? '';
         const firstScope = extractHighestPriorityScope(scopeListParam);
         if (firstScope) {
-            url.searchParams.set("q", firstScope);
+            url.searchParams.set('q', firstScope);
         }
         return url.href;
     }
@@ -71,6 +68,6 @@ export function extractPermissionGrantUrl(msg) {
  */
 export function extractPermissionScopes(msg) {
     const scopeMatch = msg.match(/\[([^\]]+)\]/);
-    return scopeMatch?.[1] ?? "unknown";
+    return scopeMatch?.[1] ?? 'unknown';
 }
 //# sourceMappingURL=permission-url.js.map

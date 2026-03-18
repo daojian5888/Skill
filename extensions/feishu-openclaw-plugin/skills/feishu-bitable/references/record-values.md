@@ -133,7 +133,7 @@
 ```json
 {
   "fields": {
-    "联系邮箱": "zhangmin@bytedance.com"
+    "联系邮箱": "zhangmin@xxxgmail.com"
   }
 }
 ```
@@ -144,9 +144,9 @@
 {
   "联系邮箱": [
     {
-      "text": "zhangmin@bytedance.com",
+      "text": "zhangmin@xxxgmail.com",
       "type": "url",
-      "link": "mailto:zhangmin@bytedance.com"
+      "link": "mailto:zhangmin@xxxgmail.com"
     }
   ]
 }
@@ -322,7 +322,7 @@
       "id": "ou_8240099442cf5da49f04f4bf8f8abcef",
       "name": "黄泡泡",
       "en_name": "Amanda Huang",
-      "email": "amandahuang@bytedance.com",
+      "email": "amandahuang@xxxgmail.com",
       "avatar_url": "https://..."
     }
   ]
@@ -667,7 +667,7 @@
       "id": "ou_8240099442cf5da49f04f4bf8f8abcef",
       "name": "黄泡泡",
       "en_name": "Amanda Huang",
-      "email": "amandahuang@bytedance.com",
+      "email": "amandahuang@xxxgmail.com",
       "avatar_url": "https://..."
     }
   ]

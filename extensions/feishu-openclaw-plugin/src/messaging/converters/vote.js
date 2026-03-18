@@ -2,12 +2,12 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * Converter for "vote" message type.
+ * Converter for "vote" message type.
  */
-import { safeParse } from "./utils.js";
+import { safeParse } from './utils';
 export const convertVote = (raw) => {
     const parsed = safeParse(raw);
-    const topic = parsed?.topic ?? "";
+    const topic = parsed?.topic ?? '';
     const options = parsed?.options ?? [];
     const parts = [];
     if (topic) {
@@ -16,7 +16,7 @@ export const convertVote = (raw) => {
     for (const opt of options) {
         parts.push(`• ${opt}`);
     }
-    const inner = parts.join("\n") || "[vote]";
+    const inner = parts.join('\n') || '[vote]';
     return {
         content: `<vote>\n${inner}\n</vote>`,
         resources: [],

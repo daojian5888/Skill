@@ -4,10 +4,10 @@
  *
  * Converter for "video_chat" message type.
  */
-import { safeParse, millisToDatetime } from "./utils.js";
+import { safeParse, millisToDatetime } from './utils';
 export const convertVideoChat = (raw) => {
     const parsed = safeParse(raw);
-    const topic = parsed?.topic ?? "";
+    const topic = parsed?.topic ?? '';
     const parts = [];
     if (topic) {
         parts.push(`📹 ${topic}`);
@@ -15,7 +15,7 @@ export const convertVideoChat = (raw) => {
     if (parsed?.start_time) {
         parts.push(`🕙 ${millisToDatetime(parsed.start_time)}`);
     }
-    const inner = parts.join("\n") || "[video chat]";
+    const inner = parts.join('\n') || '[video chat]';
     return {
         content: `<meeting>${inner}</meeting>`,
         resources: [],

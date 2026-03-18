@@ -10,8 +10,10 @@
  * 结果带 30 秒内存缓存，避免每次 invoke() 都调远程 API。
  * scope 检查失败后可调 {@link invalidateAppScopeCache} 清缓存重查。
  */
-import { trace } from "./trace.js";
-import { AppScopeCheckFailedError } from "./tool-client.js";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { larkLogger } from './lark-logger';
+const log = larkLogger('core/app-scope-checker');
+import { AppScopeCheckFailedError } from './auth-errors';
 // ---------------------------------------------------------------------------
 // Cache
 // ---------------------------------------------------------------------------
@@ -52,9 +54,9 @@ export async function getAppGrantedScopes(sdk, appId, tokenType) {
     // 2. 调用 API
     try {
         const res = await sdk.request({
-            method: "GET",
+            method: 'GET',
             url: `/open-apis/application/v6/applications/${appId}`,
-            params: { lang: "zh_cn" },
+            params: { lang: 'zh_cn' },
         });
         if (res.code !== 0) {
             // 任何 API 错误都认为是应用缺少 application:application:self_manage 权限
@@ -63,16 +65,14 @@ export async function getAppGrantedScopes(sdk, appId, tokenType) {
         // 响应结构: res.data.app.scopes → [{ scope: "xxx", description, level, token_types?: string[] }]
         // 或者从 app_version 中获取 scopes
         const app = res.data?.app ?? res.app ?? res.data;
-        const rawScopes = app?.scopes ??
-            app?.online_version?.scopes ??
-            [];
+        const rawScopes = app?.scopes ?? app?.online_version?.scopes ?? [];
         // 提取并验证 scope 字符串
         const validScopes = rawScopes
-            .filter((s) => typeof s.scope === "string" && s.scope.length > 0)
+            .filter((s) => typeof s.scope === 'string' && s.scope.length > 0)
             .map((s) => ({ scope: s.scope, token_types: s.token_types }));
         // 3. 写缓存（缓存完整数据，包含 token_types 和原始 app 对象）
         cache.set(appId, { rawScopes: validScopes, rawApp: app, fetchedAt: Date.now() });
-        trace.info(`app-scope-checker: fetched ${validScopes.length} scopes for app ${appId}`);
+        log.info(`fetched ${validScopes.length} scopes for app ${appId}`);
         // 4. 根据 tokenType 过滤
         const scopes = validScopes
             .filter((s) => {
@@ -82,7 +82,7 @@ export async function getAppGrantedScopes(sdk, appId, tokenType) {
             return true;
         })
             .map((s) => s.scope);
-        trace.info(`app-scope-checker: returning ${scopes.length} scopes${tokenType ? ` for ${tokenType} token` : ""}`);
+        log.info(`returning ${scopes.length} scopes${tokenType ? ` for ${tokenType} token` : ''}`);
         return scopes;
     }
     catch (err) {
@@ -92,18 +92,14 @@ export async function getAppGrantedScopes(sdk, appId, tokenType) {
         }
         // 检查是否是权限相关的 HTTP 错误（400/403）
         // axios/SDK 异常对象通常包含 response.status 或 status 字段
-        const statusCode = err?.response?.status ||
-            err?.status ||
-            err?.statusCode;
+        const statusCode = err?.response?.status || err?.status || err?.statusCode;
         const isPermissionError = statusCode === 400 ||
             statusCode === 403 ||
-            (err instanceof Error &&
-                (err.message.includes("status code 400") ||
-                    err.message.includes("status code 403")));
+            (err instanceof Error && (err.message.includes('status code 400') || err.message.includes('status code 403')));
         if (isPermissionError) {
             throw new AppScopeCheckFailedError(appId);
         }
-        trace.warn(`app-scope-checker: failed to fetch scopes for ${appId}: ${err instanceof Error ? err.message : err}`);
+        log.warn(`failed to fetch scopes for ${appId}: ${err instanceof Error ? err.message : err}`);
         // 其他查询失败不阻塞调用，返回空数组（后续 API 调用如果缺 scope 会被服务端拒绝）
         return [];
     }
@@ -128,11 +124,16 @@ export async function getAppInfo(sdk, appId) {
     // 提取 owner 信息
     const owner = rawApp?.owner;
     const creatorId = rawApp?.creator_id;
+    // 统一 owner 定义：type=2（企业内成员）用 owner_id，否则回退 creator_id
+    // 兼容两种字段名（owner_type 和 type）
+    const ownerTypeValue = owner?.owner_type ?? owner?.type;
+    const effectiveOwnerOpenId = ownerTypeValue === 2 && owner?.owner_id ? owner.owner_id : (creatorId ?? owner?.owner_id);
     return {
         appId,
         creatorId,
         ownerOpenId: owner?.owner_id,
         ownerType: owner?.owner_type,
+        effectiveOwnerOpenId,
         scopes: cached?.rawScopes ?? [],
     };
 }
@@ -182,7 +183,7 @@ export function isAppScopeSatisfied(appScopes, requiredScopes, scopeNeedType) {
         return true; // API 查询失败 → 退回服务端判断
     if (requiredScopes.length === 0)
         return true;
-    if (scopeNeedType === "all") {
+    if (scopeNeedType === 'all') {
         return missingScopes(appScopes, requiredScopes).length === 0;
     }
     return intersectScopes(appScopes, requiredScopes).length > 0;

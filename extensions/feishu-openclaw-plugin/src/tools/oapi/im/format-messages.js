@@ -2,26 +2,28 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * 消息格式化公共函数
+ * 消息格式化公共函数
  *
-  * 将飞书 IM API 返回的原始消息对象转换为 AI 可读的 JSON 格式。
-  * 由 feishu_im_user_get_messages 和 feishu_im_user_get_thread_messages 共享。
+ * 将飞书 IM API 返回的原始消息对象转换为 AI 可读的 JSON 格式。
+ * 由 feishu_im_user_get_messages 和 feishu_im_user_get_thread_messages 共享。
  *
-  * 所有 API 调用均通过 UAT（用户身份）进行。
+ * 所有 API 调用均通过 UAT（用户身份）进行。
  */
-import { convertMessageContent, buildConvertContextFromItem, extractMentionOpenId, } from "../../../messaging/converters/content-converter.js";
-import { getUATUserName, setUATUserNames, batchResolveUserNamesAsUser, } from "./user-name-uat.js";
-import { millisStringToDateTime } from "./time-utils.js";
+import { larkLogger } from '../../../core/lark-logger';
+import { convertMessageContent, buildConvertContextFromItem, extractMentionOpenId, } from '../../../messaging/converters/content-converter';
+import { getUATUserName, setUATUserNames, batchResolveUserNamesAsUser } from './user-name-uat';
+import { millisStringToDateTime } from './time-utils';
+const log = larkLogger('oapi/im/format-messages');
 // ---------------------------------------------------------------------------
 // UAT callbacks for merge_forward expansion
 // ---------------------------------------------------------------------------
 /** 通过 UAT 获取合并转发子消息 */
 function createUATFetchSubMessages(client) {
     return async (messageId) => {
-        const res = await client.invokeByPath("feishu_im_user_get_messages.default", `/open-apis/im/v1/messages/${messageId}`, {
-            method: "GET",
-            query: { user_id_type: "open_id", card_msg_content_type: "raw_card_content" },
-            as: "user",
+        const res = await client.invokeByPath('feishu_im_user_get_messages.default', `/open-apis/im/v1/messages/${messageId}`, {
+            method: 'GET',
+            query: { user_id_type: 'open_id', card_msg_content_type: 'raw_card_content' },
+            as: 'user',
         });
         if (res.code !== 0) {
             throw new Error(`API error: code=${res.code} msg=${res.msg}`);
@@ -39,12 +41,12 @@ function createUATFetchSubMessages(client) {
  * 并过滤掉 AI 不需要的字段（upper_message_id、tenant_key 等）。
  */
 export async function formatMessageItem(item, accountId, nameResolver, ctxOverrides) {
-    const messageId = item.message_id ?? "";
-    const msgType = item.msg_type ?? "unknown";
+    const messageId = item.message_id ?? '';
+    const msgType = item.msg_type ?? 'unknown';
     // 使用 converter 处理消息内容
-    let content = "";
+    let content = '';
     try {
-        const rawContent = item.body?.content ?? "";
+        const rawContent = item.body?.content ?? '';
         if (rawContent) {
             const ctx = {
                 ...buildConvertContextFromItem(item, messageId, accountId),
@@ -54,15 +56,19 @@ export async function formatMessageItem(item, accountId, nameResolver, ctxOverri
             content = result.content;
         }
     }
-    catch {
-        // converter 失败时回退到原始内容
-        content = item.body?.content ?? "";
+    catch (err) {
+        log.warn('converter failed, falling back to raw content', {
+            messageId,
+            msgType,
+            error: err instanceof Error ? err.message : String(err),
+        });
+        content = item.body?.content ?? '';
     }
     // 构建 sender（从 UAT 缓存中读取名字）
-    const senderId = item.sender?.id ?? "";
-    const senderType = item.sender?.sender_type ?? "unknown";
+    const senderId = item.sender?.id ?? '';
+    const senderType = item.sender?.sender_type ?? 'unknown';
     let senderName;
-    if (senderId && senderType === "user") {
+    if (senderId && senderType === 'user') {
         senderName = nameResolver(senderId);
     }
     const sender = {
@@ -76,15 +82,13 @@ export async function formatMessageItem(item, accountId, nameResolver, ctxOverri
     let mentions;
     if (item.mentions && item.mentions.length > 0) {
         mentions = item.mentions.map((m) => ({
-            key: m.key ?? "",
+            key: m.key ?? '',
             id: extractMentionOpenId(m.id),
-            name: m.name ?? "",
+            name: m.name ?? '',
         }));
     }
     // 转换 create_time（飞书 API 返回毫秒时间戳字符串 → ISO 8601 +08:00）
-    const createTime = item.create_time
-        ? millisStringToDateTime(item.create_time)
-        : "";
+    const createTime = item.create_time ? millisStringToDateTime(item.create_time) : '';
     const formatted = {
         message_id: messageId,
         msg_type: msgType,
@@ -135,7 +139,7 @@ export async function formatMessageList(items, account, log, client) {
     // 2. 收集所有 user 类型 sender 的 open_id
     const senderIds = [
         ...new Set(items
-            .map((item) => item.sender?.sender_type === "user" ? item.sender.id : undefined)
+            .map((item) => (item.sender?.sender_type === 'user' ? item.sender.id : undefined))
             .filter((id) => !!id)),
     ];
     // 3. 批量解析 UAT 缓存中缺失的名字
@@ -151,6 +155,7 @@ export async function formatMessageList(items, account, log, client) {
     };
     const ctxOverrides = {
         account,
+        accountId,
         resolveUserName: nameResolver,
         batchResolveNames: uatBatchResolve,
         fetchSubMessages: createUATFetchSubMessages(client),

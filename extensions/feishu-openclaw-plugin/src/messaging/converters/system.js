@@ -8,27 +8,26 @@
  * `{from_user}`, `{to_chatters}`, `{divider_text}` that are replaced
  * with actual values from the message body.
  */
-import { safeParse } from "./utils.js";
+import { safeParse } from './utils';
 export const convertSystem = (raw) => {
     const parsed = safeParse(raw);
     if (!parsed?.template) {
-        return { content: "[system message]", resources: [] };
+        return { content: '[system message]', resources: [] };
     }
     let content = parsed.template;
-    // Replace {from_user} with comma-joined names
-    if (parsed.from_user?.length) {
-        content = content.replace("{from_user}", parsed.from_user.filter(Boolean).join(", "));
+    const replacements = {
+        '{from_user}': parsed.from_user?.length ? parsed.from_user.filter(Boolean).join(', ') : undefined,
+        '{to_chatters}': parsed.to_chatters?.length ? parsed.to_chatters.filter(Boolean).join(', ') : undefined,
+        '{divider_text}': parsed.divider_text?.text,
+    };
+    for (const [placeholder, value] of Object.entries(replacements)) {
+        if (value != null) {
+            content = content.replaceAll(placeholder, value);
+        }
+        else {
+            content = content.replaceAll(placeholder, '');
+        }
     }
-    // Replace {to_chatters} with comma-joined names
-    if (parsed.to_chatters?.length) {
-        content = content.replace("{to_chatters}", parsed.to_chatters.filter(Boolean).join(", "));
-    }
-    // Replace {divider_text} with divider text content
-    if (parsed.divider_text?.text) {
-        content = content.replace("{divider_text}", parsed.divider_text.text);
-    }
-    // Clean up any remaining unreplaced placeholders
-    content = content.replace(/\{[^}]+\}/g, "");
     return { content: content.trim(), resources: [] };
 };
 //# sourceMappingURL=system.js.map

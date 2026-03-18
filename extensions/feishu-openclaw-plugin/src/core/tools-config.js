@@ -52,4 +52,37 @@ export function resolveToolsConfig(cfg) {
         okr: cfg.okr ?? DEFAULT_TOOLS_CONFIG.okr,
     };
 }
+// ---------------------------------------------------------------------------
+// Multi-account aggregation
+// ---------------------------------------------------------------------------
+/**
+ * 合并多个账户的工具配置（取并集）。
+ *
+ * 工具注册是全局的（启动时注册一次），只要任意一个账户启用了某工具，
+ * 该工具就应被注册。执行时由 LarkTicket 路由到具体账户。
+ */
+export function resolveAnyEnabledToolsConfig(accounts) {
+    const merged = {
+        doc: false,
+        wiki: false,
+        drive: false,
+        perm: false,
+        scopes: false,
+        mail: false,
+        sheets: false,
+        okr: false,
+    };
+    for (const account of accounts) {
+        const cfg = resolveToolsConfig(account.config.tools);
+        merged.doc = merged.doc || cfg.doc;
+        merged.wiki = merged.wiki || cfg.wiki;
+        merged.drive = merged.drive || cfg.drive;
+        merged.perm = merged.perm || cfg.perm;
+        merged.scopes = merged.scopes || cfg.scopes;
+        merged.mail = merged.mail || cfg.mail;
+        merged.sheets = merged.sheets || cfg.sheets;
+        merged.okr = merged.okr || cfg.okr;
+    }
+    return merged;
+}
 //# sourceMappingURL=tools-config.js.map

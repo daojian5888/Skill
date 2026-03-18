@@ -11,8 +11,9 @@
  * - `chat_mode`: "group" | "topic" | "p2p"
  * - `group_message_type`: "chat" | "thread" (only for chat_mode=group)
  */
-import { LarkClient } from "./lark-client.js";
-import { trace } from "./trace.js";
+import { LarkClient } from './lark-client';
+import { larkLogger } from './lark-logger';
+const log = larkLogger('core/chat-info-cache');
 // ---------------------------------------------------------------------------
 // Cache implementation
 // ---------------------------------------------------------------------------
@@ -95,7 +96,7 @@ export async function isThreadCapableGroup(params) {
     const info = await getChatInfo({ cfg, chatId, accountId });
     if (!info)
         return false;
-    return info.chatMode === "topic" || info.groupMessageType === "thread";
+    return info.chatMode === 'topic' || info.groupMessageType === 'thread';
 }
 /**
  * Fetch (or read from cache) the chat metadata for a given chat ID.
@@ -104,7 +105,7 @@ export async function isThreadCapableGroup(params) {
  */
 export async function getChatInfo(params) {
     const { cfg, chatId, accountId } = params;
-    const effectiveAccountId = accountId ?? "default";
+    const effectiveAccountId = accountId ?? 'default';
     const cache = getChatInfoCache(effectiveAccountId);
     const cached = cache.get(chatId);
     if (cached)
@@ -115,19 +116,38 @@ export async function getChatInfo(params) {
             path: { chat_id: chatId },
         });
         const data = response?.data;
-        const chatMode = data?.chat_mode ?? "group";
+        const chatMode = data?.chat_mode ?? 'group';
         const groupMessageType = data?.group_message_type;
         const info = {
             chatMode: chatMode,
             groupMessageType: groupMessageType,
         };
         cache.set(chatId, info);
-        trace.info(`chat-info-cache: resolved ${chatId} → chat_mode=${chatMode}, group_message_type=${groupMessageType ?? "N/A"}`);
+        log.info(`resolved ${chatId} → chat_mode=${chatMode}, group_message_type=${groupMessageType ?? 'N/A'}`);
         return info;
     }
     catch (err) {
-        trace.error(`chat-info-cache: failed to get chat info for ${chatId}: ${String(err)}`);
+        log.error(`failed to get chat info for ${chatId}: ${String(err)}`);
         return undefined;
     }
+}
+// ---------------------------------------------------------------------------
+// getChatTypeFeishu
+// ---------------------------------------------------------------------------
+/**
+ * Determine the chat type (p2p or group) for a given chat ID.
+ *
+ * Delegates to the shared {@link getChatInfo} cache (account-scoped LRU with
+ * 1-hour TTL) so that chat metadata is fetched at most once across all
+ * call-sites (dispatch, reaction handler, etc.).
+ *
+ * Falls back to "p2p" if the API call fails.
+ */
+export async function getChatTypeFeishu(params) {
+    const { cfg, chatId, accountId } = params;
+    const info = await getChatInfo({ cfg, chatId, accountId });
+    if (!info)
+        return 'p2p';
+    return info.chatMode === 'group' || info.chatMode === 'topic' ? 'group' : 'p2p';
 }
 //# sourceMappingURL=chat-info-cache.js.map

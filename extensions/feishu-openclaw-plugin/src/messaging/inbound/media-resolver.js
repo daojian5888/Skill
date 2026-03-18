@@ -8,8 +8,8 @@
  * the content converter phase, and builds the payload object spread
  * into the agent envelope.
  */
-import { LarkClient } from "../../core/lark-client.js";
-import { downloadMessageResourceFeishu } from "../outbound/media.js";
+import { LarkClient } from '../../core/lark-client';
+import { downloadMessageResourceFeishu } from '../outbound/media';
 // ---------------------------------------------------------------------------
 // Resource-descriptor-based download
 // ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ export async function downloadResources(params) {
     const core = LarkClient.runtime;
     for (const res of resources) {
         try {
-            const resourceType = res.type === "image" ? "image" : "file";
+            const resourceType = res.type === 'image' ? 'image' : 'file';
             const result = await downloadMessageResourceFeishu({
                 cfg,
                 messageId,
@@ -38,7 +38,7 @@ export async function downloadResources(params) {
                 contentType = await core.media.detectMime({ buffer: result.buffer });
             }
             const fileName = result.fileName || res.fileName;
-            const saved = await core.channel.media.saveMediaBuffer(result.buffer, contentType, "inbound", maxBytes, fileName);
+            const saved = await core.channel.media.saveMediaBuffer(result.buffer, contentType, 'inbound', maxBytes, fileName);
             const placeholder = inferPlaceholderFromType(res.type);
             out.push({
                 path: saved.path,
@@ -57,11 +57,16 @@ export async function downloadResources(params) {
 }
 function inferPlaceholderFromType(type) {
     switch (type) {
-        case "image": return "<media:image>";
-        case "file": return "<media:document>";
-        case "audio": return "<media:audio>";
-        case "video": return "<media:video>";
-        case "sticker": return "<media:sticker>";
+        case 'image':
+            return '<media:image>';
+        case 'file':
+            return '<media:document>';
+        case 'audio':
+            return '<media:audio>';
+        case 'video':
+            return '<media:video>';
+        case 'sticker':
+            return '<media:sticker>';
     }
 }
 // ---------------------------------------------------------------------------
@@ -70,9 +75,7 @@ function inferPlaceholderFromType(type) {
 export function buildFeishuMediaPayload(mediaList) {
     const first = mediaList[0];
     const mediaPaths = mediaList.map((m) => m.path);
-    const mediaTypes = mediaList
-        .map((m) => m.contentType)
-        .filter(Boolean);
+    const mediaTypes = mediaList.map((m) => m.contentType).filter(Boolean);
     return {
         MediaPath: first?.path,
         MediaType: first?.contentType,

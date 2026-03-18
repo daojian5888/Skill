@@ -4,8 +4,8 @@
  *
  * Converter for "text" message type.
  */
-import { resolveMentions } from "./content-converter.js";
-import { safeParse } from "./utils.js";
+import { resolveMentions } from './content-converter';
+import { safeParse } from './utils';
 export const convertText = (raw, ctx) => {
     const parsed = safeParse(raw);
     const text = parsed?.text ?? raw;

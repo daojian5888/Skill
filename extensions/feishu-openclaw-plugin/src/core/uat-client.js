@@ -8,11 +8,14 @@
  * behalf of a user.  Tokens are read from the OS Keychain, refreshed
  * transparently, and **never** exposed to the AI layer.
  */
-import { getStoredToken, setStoredToken, removeStoredToken, tokenStatus, maskToken, } from "./token-store.js";
-import { resolveOAuthEndpoints } from "./device-flow.js";
-import { trace, feishuFetch } from "./trace.js";
-import { LarkClient } from "./lark-client.js";
-import { getAppOwnerFallback } from "./app-owner-fallback.js";
+import { getStoredToken, setStoredToken, removeStoredToken, tokenStatus, maskToken, } from './token-store';
+import { resolveOAuthEndpoints } from './device-flow';
+import { larkLogger } from './lark-logger';
+const log = larkLogger('core/uat-client');
+import { feishuFetch } from './feishu-fetch';
+import { REFRESH_TOKEN_IRRECOVERABLE, TOKEN_RETRY_CODES, NeedAuthorizationError } from './auth-errors';
+// Re-export for backward compatibility
+export { NeedAuthorizationError };
 // ---------------------------------------------------------------------------
 // Per-user refresh lock
 // ---------------------------------------------------------------------------
@@ -30,16 +33,16 @@ const refreshLocks = new Map();
 async function doRefreshToken(opts, stored) {
     // refresh_token already expired → can't refresh, need re-auth.
     if (Date.now() >= stored.refreshExpiresAt) {
-        trace.info(`uat-client: refresh_token expired for ${opts.userOpenId}, clearing`);
+        log.info(`refresh_token expired for ${opts.userOpenId}, clearing`);
         await removeStoredToken(opts.appId, opts.userOpenId);
         return null;
     }
     const endpoints = resolveOAuthEndpoints(opts.domain);
     const resp = await feishuFetch(endpoints.token, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-            grant_type: "refresh_token",
+            grant_type: 'refresh_token',
             refresh_token: stored.refreshToken,
             client_id: opts.appId,
             client_secret: opts.appSecret,
@@ -52,17 +55,17 @@ async function doRefreshToken(opts, stored) {
     const error = data.error;
     if ((code !== undefined && code !== 0) || error) {
         const errCode = code ?? error;
-        const errMsg = data.error_description ?? data.msg ?? "unknown";
+        const errMsg = data.error_description ?? data.msg ?? 'unknown';
         // Known irrecoverable codes: invalid/expired/missing refresh_token
-        if (code === 20003 || code === 20004 || code === 20024 || code === 20063) {
-            trace.warn(`uat-client: refresh failed (code=${errCode}), clearing token for ${opts.userOpenId}`);
+        if (REFRESH_TOKEN_IRRECOVERABLE.has(code)) {
+            log.warn(`refresh failed (code=${errCode}), clearing token for ${opts.userOpenId}`);
             await removeStoredToken(opts.appId, opts.userOpenId);
             return null;
         }
         throw new Error(`Token refresh failed (code=${errCode}): ${errMsg}`);
     }
     if (!data.access_token) {
-        throw new Error("Token refresh returned no access_token");
+        throw new Error('Token refresh returned no access_token');
     }
     const now = Date.now();
     const updated = {
@@ -79,7 +82,7 @@ async function doRefreshToken(opts, stored) {
         grantedAt: stored.grantedAt,
     };
     await setStoredToken(updated);
-    trace.info(`uat-client: refreshed UAT for ${opts.userOpenId} (at:${maskToken(updated.accessToken)})`);
+    log.info(`refreshed UAT for ${opts.userOpenId} (at:${maskToken(updated.accessToken)})`);
     return updated;
 }
 /**
@@ -115,44 +118,16 @@ async function refreshWithLock(opts, stored) {
  * **The returned token must never be exposed to the AI layer.**
  */
 export async function getValidAccessToken(opts) {
-    // 1. Check App Owner (拦截非所有者，即使有 Token 也不允许使用)
-    // 构造临时 account 对象以调用 getAppOwnerFallback
-    const tempAccount = {
-        accountId: "temp",
-        enabled: true,
-        configured: true,
-        brand: opts.domain,
-        appId: opts.appId,
-        appSecret: opts.appSecret,
-        config: {},
-    };
-    try {
-        const sdk = LarkClient.fromAccount(tempAccount).sdk;
-        const appOwnerId = await getAppOwnerFallback(tempAccount, sdk);
-        if (appOwnerId && appOwnerId !== opts.userOpenId) {
-            trace.warn(`uat-client: blocking non-owner access for user ${opts.userOpenId} (owner=${appOwnerId})`);
-            // 抛出 NeedAuthorizationError 会导致前端弹出授权卡片，但用户授权后依然会被拦截
-            // 这里抛出普通 Error，前端会显示错误信息
-            throw new Error("Permission denied: Only the app owner is authorized to use this feature.");
-        }
-    }
-    catch (err) {
-        // 忽略获取 owner 失败的错误（fail open），避免影响正常流程
-        // 除非错误是我们自己抛出的 Permission denied
-        if (err.message && err.message.includes("Permission denied")) {
-            throw err;
-        }
-        trace.warn(`uat-client: failed to check app owner, proceeding: ${err}`);
-    }
-    let stored = await getStoredToken(opts.appId, opts.userOpenId);
+    // Owner 检查已迁移到 owner-policy.ts（由 tool-client.ts 的 invokeAsUser 调用）
+    const stored = await getStoredToken(opts.appId, opts.userOpenId);
     if (!stored) {
         throw new NeedAuthorizationError(opts.userOpenId);
     }
     const status = tokenStatus(stored);
-    if (status === "valid") {
+    if (status === 'valid') {
         return stored.accessToken;
     }
-    if (status === "needs_refresh") {
+    if (status === 'needs_refresh') {
         const refreshed = await refreshWithLock(opts, stored);
         if (!refreshed) {
             throw new NeedAuthorizationError(opts.userOpenId);
@@ -173,9 +148,10 @@ export async function callWithUAT(opts, apiCall) {
     }
     catch (err) {
         // Retry once if the server reports token invalid/expired.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const code = err?.code ?? err?.response?.data?.code;
-        if (code === 99991668 || code === 99991669) {
-            trace.warn(`uat-client: API call failed (code=${code}), refreshing and retrying`);
+        if (TOKEN_RETRY_CODES.has(code)) {
+            log.warn(`API call failed (code=${code}), refreshing and retrying`);
             const stored = await getStoredToken(opts.appId, opts.userOpenId);
             if (!stored)
                 throw new NeedAuthorizationError(opts.userOpenId);
@@ -188,43 +164,10 @@ export async function callWithUAT(opts, apiCall) {
     }
 }
 /**
- * Query the authorisation status for a user (does **not** trigger refresh).
- */
-export async function getUATStatus(appId, userOpenId) {
-    const stored = await getStoredToken(appId, userOpenId);
-    if (!stored) {
-        return { authorized: false, userOpenId };
-    }
-    return {
-        authorized: true,
-        userOpenId,
-        scope: stored.scope,
-        expiresAt: stored.expiresAt,
-        refreshExpiresAt: stored.refreshExpiresAt,
-        grantedAt: stored.grantedAt,
-        tokenStatus: tokenStatus(stored),
-    };
-}
-/**
  * Revoke a user's UAT by removing it from the Keychain.
  */
 export async function revokeUAT(appId, userOpenId) {
     await removeStoredToken(appId, userOpenId);
-    trace.info(`uat-client: revoked UAT for ${userOpenId}`);
-}
-// ---------------------------------------------------------------------------
-// Error class
-// ---------------------------------------------------------------------------
-/**
- * Thrown when no valid UAT exists and the user needs to (re-)authorise.
- * Callers should catch this and trigger the OAuth flow.
- */
-export class NeedAuthorizationError extends Error {
-    userOpenId;
-    constructor(userOpenId) {
-        super("need_user_authorization");
-        this.name = "NeedAuthorizationError";
-        this.userOpenId = userOpenId;
-    }
+    log.info(`revoked UAT for ${userOpenId}`);
 }
 //# sourceMappingURL=uat-client.js.map

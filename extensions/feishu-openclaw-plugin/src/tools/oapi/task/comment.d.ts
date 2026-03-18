@@ -11,6 +11,6 @@
  *   - list:   GET  /open-apis/task/v2/tasks/:task_guid/comments
  *   - get:    GET  /open-apis/task/v2/comments/:comment_id
  */
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
 export declare function registerFeishuTaskCommentTool(api: OpenClawPluginApi): void;
 //# sourceMappingURL=comment.d.ts.map

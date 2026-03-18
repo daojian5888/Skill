@@ -12,24 +12,25 @@
  *   - `LarkClient.fromAccount(account)` — from a pre-resolved account
  *   - `LarkClient.fromCredentials(credentials)` — ephemeral instance (not cached)
  */
-import * as Lark from "@larksuiteoapi/node-sdk";
-import type { ClawdbotConfig, PluginRuntime } from "openclaw/plugin-sdk";
-import type { LarkBrand, LarkAccount } from "./types.js";
-import type { FeishuProbeResult } from "../channel/types.js";
-import type { MessageDedup } from "../messaging/inbound/dedup.js";
+import * as Lark from '@larksuiteoapi/node-sdk';
+import type { ClawdbotConfig, PluginRuntime } from 'openclaw/plugin-sdk';
+import type { LarkBrand, LarkAccount, FeishuProbeResult } from './types';
+import type { MessageDedup } from '../messaging/inbound/dedup';
 /** Credential set accepted by the ephemeral `fromCredentials` factory. */
-export type LarkClientCredentials = {
+export interface LarkClientCredentials {
     accountId?: string;
     appId?: string;
     appSecret?: string;
     brand?: LarkBrand;
-};
+}
 export declare class LarkClient {
     readonly account: LarkAccount;
     private _sdk;
     private _wsClient;
     private _botOpenId;
     private _botName;
+    private _lastProbeResult;
+    private _lastProbeAt;
     /** Attached message deduplicator — disposed together with the client. */
     messageDedup: MessageDedup | null;
     private static _runtime;
@@ -37,6 +38,11 @@ export declare class LarkClient {
     static setRuntime(runtime: PluginRuntime): void;
     /** Retrieve the stored runtime instance. Throws if not yet initialised. */
     static get runtime(): PluginRuntime;
+    private static _globalConfig;
+    /** Store the original global config (called during monitor startup). */
+    static setGlobalConfig(cfg: ClawdbotConfig): void;
+    /** Retrieve the stored global config, or `null` if not yet set. */
+    static get globalConfig(): ClawdbotConfig | null;
     private constructor();
     /** Shorthand for `this.account.accountId`. */
     get accountId(): string;
@@ -68,7 +74,9 @@ export declare class LarkClient {
      * Results are cached on the instance for subsequent access via
      * `botOpenId` / `botName`.
      */
-    probe(): Promise<FeishuProbeResult>;
+    probe(opts?: {
+        maxAgeMs?: number;
+    }): Promise<FeishuProbeResult>;
     /** Cached bot open_id (available after `probe()` or `startWS()`). */
     get botOpenId(): string | undefined;
     /** Cached bot name (available after `probe()` or `startWS()`). */

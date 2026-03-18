@@ -13,7 +13,7 @@
  * The message still flows through `tryFastAbortFromMessage()` for
  * authoritative handling.
  */
-import type { FeishuMessageEvent } from "../messaging/types.js";
+import type { FeishuMessageEvent } from '../messaging/types';
 /** Exact trigger-word match (same logic as OpenClaw core `isAbortTrigger`). */
 export declare function isAbortTrigger(text: string): boolean;
 /**

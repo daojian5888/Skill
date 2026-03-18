@@ -7,15 +7,15 @@
  * Provides runtime validation, sensible defaults, and cross-field refinements
  * so that every consuming module can rely on well-typed configuration objects.
  */
-import { z } from "zod";
+import { z, toJSONSchema } from 'zod';
 export { z };
 // ---------------------------------------------------------------------------
 // Shared micro-schemas
 // ---------------------------------------------------------------------------
-const DmPolicyEnum = z.enum(["open", "pairing", "allowlist", "disabled"]);
-const GroupPolicyEnum = z.enum(["open", "allowlist", "disabled"]);
-const ConnectionModeEnum = z.enum(["websocket", "webhook"]);
-const ReplyModeValue = z.enum(["auto", "static", "streaming"]);
+const DmPolicyEnum = z.enum(['open', 'pairing', 'allowlist', 'disabled']);
+const GroupPolicyEnum = z.enum(['open', 'allowlist', 'disabled']);
+const ConnectionModeEnum = z.enum(['websocket', 'webhook']);
+const ReplyModeValue = z.enum(['auto', 'static', 'streaming']);
 const ReplyModeSchema = z
     .union([
     ReplyModeValue,
@@ -26,13 +26,8 @@ const ReplyModeSchema = z
     }),
 ])
     .optional();
-const ChunkModeEnum = z.enum(["newline", "paragraph", "none"]);
-const DomainSchema = z
-    .string()
-    .refine((v) => v === "feishu" ||
-    v === "lark" ||
-    v.startsWith("https://"), { message: "Domain must be 'feishu', 'lark', or a custom https:// URL" })
-    .optional();
+const ChunkModeEnum = z.enum(['newline', 'paragraph', 'none']);
+const DomainSchema = z.union([z.literal('feishu'), z.literal('lark'), z.string().regex(/^https:\/\//)]).optional();
 const AllowFromSchema = z
     .union([z.string(), z.array(z.string())])
     .optional()
@@ -71,7 +66,7 @@ const BlockStreamingCoalesceSchema = z
     .optional();
 const MarkdownConfigSchema = z
     .object({
-    tables: z.enum(["off", "bullets", "code"]).optional(),
+    tables: z.enum(['off', 'bullets', 'code']).optional(),
 })
     .optional();
 const HeartbeatSchema = z
@@ -103,18 +98,12 @@ const DedupSchema = z
     maxEntries: z.number().optional(), // default 5000
 })
     .optional();
-const ReactionNotificationModeSchema = z.enum(["off", "own", "all"]).optional();
+const ReactionNotificationModeSchema = z.enum(['off', 'own', 'all']).optional();
 export const UATConfigSchema = z
     .object({
     enabled: z.boolean().optional(),
     allowedScopes: z.array(z.string()).optional(),
     blockedScopes: z.array(z.string()).optional(),
-})
-    .optional();
-const ExtraSchema = z
-    .object({
-    domain: z.string().optional(),
-    httpHeaders: z.record(z.string(), z.string()).optional(),
 })
     .optional();
 const DmConfigSchema = z
@@ -174,27 +163,39 @@ export const FeishuAccountConfigSchema = z.object({
     reactionNotifications: ReactionNotificationModeSchema,
     threadSession: z.boolean().optional(),
     uat: UATConfigSchema,
-    extra: ExtraSchema,
 });
 // ---------------------------------------------------------------------------
 // Top-level Feishu config schema
 // ---------------------------------------------------------------------------
-export const FeishuConfigSchema = FeishuAccountConfigSchema
-    .extend({
+export const FeishuConfigSchema = FeishuAccountConfigSchema.extend({
     accounts: z.record(z.string(), FeishuAccountConfigSchema).optional(),
-})
-    .superRefine((data, ctx) => {
+}).superRefine((data, ctx) => {
     // When dmPolicy is "open", allowFrom must contain the wildcard "*".
-    if (data.dmPolicy === "open") {
+    if (data.dmPolicy === 'open') {
         const list = data.allowFrom;
-        const hasWildcard = Array.isArray(list) && list.includes("*");
+        const hasWildcard = Array.isArray(list) && list.includes('*');
         if (!hasWildcard) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                path: ["allowFrom"],
+                path: ['allowFrom'],
                 message: 'When dmPolicy is "open", allowFrom must include "*" to permit all senders.',
             });
         }
     }
+});
+// ---------------------------------------------------------------------------
+// Auto-generated JSON Schema (single source of truth)
+// ---------------------------------------------------------------------------
+/**
+ * JSON Schema derived from FeishuConfigSchema.
+ *
+ * - `io: "input"` exposes the input type for `.transform()` schemas (e.g. AllowFromSchema).
+ * - `unrepresentable: "any"` degrades `.superRefine()` constraints to `{}`.
+ * - `target: "draft-07"` matches the plugin system's expected JSON Schema version.
+ */
+export const FEISHU_CONFIG_JSON_SCHEMA = toJSONSchema(FeishuConfigSchema, {
+    target: 'draft-07',
+    io: 'input',
+    unrepresentable: 'any',
 });
 //# sourceMappingURL=config-schema.js.map

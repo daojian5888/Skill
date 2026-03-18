@@ -2,123 +2,109 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * feishu_calendar_event tool -- Manage Feishu calendar events.
+ * feishu_calendar_event tool -- Manage Feishu calendar events.
  *
-  * P0 Actions: create, list, get
+ * P0 Actions: create, list, get
  *
-  * Uses the Feishu Calendar API:
-  *   - create: POST /open-apis/calendar/v4/calendars/:calendar_id/events
-  *             POST /open-apis/calendar/v4/calendars/:calendar_id/events/:event_id/attendees/batch_create
-  *   - list:   GET  /open-apis/calendar/v4/calendars/:calendar_id/events/instance_view
-  *   - get:    GET  /open-apis/calendar/v4/calendars/:calendar_id/events/:event_id
+ * Uses the Feishu Calendar API:
+ *   - create: POST /open-apis/calendar/v4/calendars/:calendar_id/events
+ *             POST /open-apis/calendar/v4/calendars/:calendar_id/events/:event_id/attendees/batch_create
+ *   - list:   GET  /open-apis/calendar/v4/calendars/:calendar_id/events/instance_view
+ *   - get:    GET  /open-apis/calendar/v4/calendars/:calendar_id/events/:event_id
  */
-import { Type } from "@sinclair/typebox";
-import { json, createToolContext, parseTimeToTimestamp, assertLarkOk, handleInvokeErrorWithAutoAuth, formatLarkError, } from "../helpers.js";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Type } from '@sinclair/typebox';
+import { json, createToolContext, parseTimeToTimestamp, assertLarkOk, handleInvokeErrorWithAutoAuth, formatLarkError, unixTimestampToISO8601, } from '../helpers';
 // ---------------------------------------------------------------------------
 // Schema
 // ---------------------------------------------------------------------------
 const FeishuCalendarEventSchema = Type.Union([
     // CREATE
     Type.Object({
-        action: Type.Literal("create"),
+        action: Type.Literal('create'),
         start_time: Type.String({
             description: "开始时间（必填）。ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'",
         }),
         end_time: Type.String({
-            description: "结束时间（必填）。格式同 start_time。如果用户未指定时长，默认为开始时间后1小时。",
+            description: '结束时间（必填）。格式同 start_time。如果用户未指定时长，默认为开始时间后1小时。',
         }),
         summary: Type.Optional(Type.String({
-            description: "日程标题（可选，但强烈建议提供）",
+            description: '日程标题（可选，但强烈建议提供）',
         })),
         user_open_id: Type.Optional(Type.String({
-            description: "当前请求用户的 open_id（可选，但强烈建议提供）。从消息上下文的 SenderId 字段获取，格式为 ou_xxx。日程创建在应用日历上，必须通过此参数将用户加为参会人，日程才会出现在用户的飞书日历中。",
+            description: '当前请求用户的 open_id（可选，但强烈建议提供）。从消息上下文的 SenderId 字段获取，格式为 ou_xxx。日程创建在应用日历上，必须通过此参数将用户加为参会人，日程才会出现在用户的飞书日历中。',
         })),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
         description: Type.Optional(Type.String({
-            description: "日程描述",
+            description: '日程描述',
         })),
         attendees: Type.Optional(Type.Array(Type.Object({
             type: Type.Union([
-                Type.Literal("user"),
-                Type.Literal("chat"),
-                Type.Literal("resource"),
-                Type.Literal("third_party"),
+                Type.Literal('user'),
+                Type.Literal('chat'),
+                Type.Literal('resource'),
+                Type.Literal('third_party'),
             ]),
             id: Type.String({
-                description: "Attendee open_id, chat_id, resource_id, or email",
+                description: 'Attendee open_id, chat_id, resource_id, or email',
             }),
         }), {
             description: "参会人列表（强烈建议提供，否则日程只在应用日历上，用户看不到）。type='user' 时 id 填 open_id，type='third_party' 时 id 填邮箱。",
         })),
         vchat: Type.Optional(Type.Object({
-            vc_type: Type.Optional(Type.Union([
-                Type.Literal("vc"),
-                Type.Literal("third_party"),
-                Type.Literal("no_meeting"),
-            ], {
-                description: "视频会议类型：vc（飞书视频会议）、third_party（第三方链接）、no_meeting（无视频会议）。默认为空，首次添加参与人时自动生成飞书视频会议。",
+            vc_type: Type.Optional(Type.Union([Type.Literal('vc'), Type.Literal('third_party'), Type.Literal('no_meeting')], {
+                description: '视频会议类型：vc（飞书视频会议）、third_party（第三方链接）、no_meeting（无视频会议）。默认为空，首次添加参与人时自动生成飞书视频会议。',
             })),
-            icon_type: Type.Optional(Type.Union([
-                Type.Literal("vc"),
-                Type.Literal("live"),
-                Type.Literal("default"),
-            ], {
-                description: "第三方视频会议 icon 类型（仅 vc_type=third_party 时有效）。",
+            icon_type: Type.Optional(Type.Union([Type.Literal('vc'), Type.Literal('live'), Type.Literal('default')], {
+                description: '第三方视频会议 icon 类型（仅 vc_type=third_party 时有效）。',
             })),
             description: Type.Optional(Type.String({
-                description: "第三方视频会议文案（仅 vc_type=third_party 时有效）。",
+                description: '第三方视频会议文案（仅 vc_type=third_party 时有效）。',
             })),
             meeting_url: Type.Optional(Type.String({
-                description: "第三方视频会议链接（仅 vc_type=third_party 时有效）。",
+                description: '第三方视频会议链接（仅 vc_type=third_party 时有效）。',
             })),
         }, {
-            description: "视频会议信息。不传则默认在首次添加参与人时自动生成飞书视频会议。",
+            description: '视频会议信息。不传则默认在首次添加参与人时自动生成飞书视频会议。',
         })),
-        visibility: Type.Optional(Type.Union([
-            Type.Literal("default"),
-            Type.Literal("public"),
-            Type.Literal("private"),
-        ], {
-            description: "日程公开范围。default（默认，跟随日历权限）、public（公开详情）、private（私密，仅自己可见）。默认值：default。",
+        visibility: Type.Optional(Type.Union([Type.Literal('default'), Type.Literal('public'), Type.Literal('private')], {
+            description: '日程公开范围。default（默认，跟随日历权限）、public（公开详情）、private（私密，仅自己可见）。默认值：default。',
         })),
         attendee_ability: Type.Optional(Type.Union([
-            Type.Literal("none"),
-            Type.Literal("can_see_others"),
-            Type.Literal("can_invite_others"),
-            Type.Literal("can_modify_event"),
+            Type.Literal('none'),
+            Type.Literal('can_see_others'),
+            Type.Literal('can_invite_others'),
+            Type.Literal('can_modify_event'),
         ], {
-            description: "参与人权限。none（无法编辑、邀请、查看）、can_see_others（可查看参与人列表）、can_invite_others（可邀请其他人）、can_modify_event（可编辑日程）。默认值：none。",
+            description: '参与人权限。none（无法编辑、邀请、查看）、can_see_others（可查看参与人列表）、can_invite_others（可邀请其他人）、can_modify_event（可编辑日程）。默认值：none。',
         })),
-        free_busy_status: Type.Optional(Type.Union([
-            Type.Literal("busy"),
-            Type.Literal("free"),
-        ], {
-            description: "日程占用的忙闲状态。busy（忙碌）、free（空闲）。默认值：busy。",
+        free_busy_status: Type.Optional(Type.Union([Type.Literal('busy'), Type.Literal('free')], {
+            description: '日程占用的忙闲状态。busy（忙碌）、free（空闲）。默认值：busy。',
         })),
         location: Type.Optional(Type.Object({
             name: Type.Optional(Type.String({
-                description: "地点名称",
+                description: '地点名称',
             })),
             address: Type.Optional(Type.String({
-                description: "地点地址",
+                description: '地点地址',
             })),
             latitude: Type.Optional(Type.Number({
-                description: "地点坐标纬度（国内采用 GCJ-02 标准，海外采用 WGS84 标准）",
+                description: '地点坐标纬度（国内采用 GCJ-02 标准，海外采用 WGS84 标准）',
             })),
             longitude: Type.Optional(Type.Number({
-                description: "地点坐标经度（国内采用 GCJ-02 标准，海外采用 WGS84 标准）",
+                description: '地点坐标经度（国内采用 GCJ-02 标准，海外采用 WGS84 标准）',
             })),
         }, {
-            description: "日程地点信息",
+            description: '日程地点信息',
         })),
         reminders: Type.Optional(Type.Array(Type.Object({
             minutes: Type.Number({
-                description: "日程提醒时间的偏移量（分钟）。正数表示在日程开始前提醒，负数表示在日程开始后提醒。范围：-20160 ~ 20160。",
+                description: '日程提醒时间的偏移量（分钟）。正数表示在日程开始前提醒，负数表示在日程开始后提醒。范围：-20160 ~ 20160。',
             }),
         }), {
-            description: "日程提醒列表",
+            description: '日程提醒列表',
         })),
         recurrence: Type.Optional(Type.String({
             description: "重复日程的重复性规则（RFC5545 RRULE 格式）。例如：'FREQ=DAILY;INTERVAL=1' 表示每天重复。",
@@ -126,41 +112,41 @@ const FeishuCalendarEventSchema = Type.Union([
     }),
     // LIST (使用 instance_view 接口)
     Type.Object({
-        action: Type.Literal("list"),
+        action: Type.Literal('list'),
         start_time: Type.String({
             description: "开始时间。ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'。注意：start_time 与 end_time 之间的时间区间需要小于 40 天。",
         }),
         end_time: Type.String({
-            description: "结束时间。格式同 start_time。注意：start_time 与 end_time 之间的时间区间需要小于 40 天。",
+            description: '结束时间。格式同 start_time。注意：start_time 与 end_time 之间的时间区间需要小于 40 天。',
         }),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
     }),
     // GET
     Type.Object({
-        action: Type.Literal("get"),
+        action: Type.Literal('get'),
         event_id: Type.String({
-            description: "Event ID",
+            description: 'Event ID',
         }),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
     }),
     // PATCH (P1)
     Type.Object({
-        action: Type.Literal("patch"),
+        action: Type.Literal('patch'),
         event_id: Type.String({
-            description: "Event ID",
+            description: 'Event ID',
         }),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
         summary: Type.Optional(Type.String({
-            description: "新的日程标题",
+            description: '新的日程标题',
         })),
         description: Type.Optional(Type.String({
-            description: "新的日程描述",
+            description: '新的日程描述',
         })),
         start_time: Type.Optional(Type.String({
             description: "新的开始时间（ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'）",
@@ -169,61 +155,57 @@ const FeishuCalendarEventSchema = Type.Union([
             description: "新的结束时间（ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'）",
         })),
         location: Type.Optional(Type.String({
-            description: "新的地点",
+            description: '新的地点',
         })),
     }),
     // DELETE (P1)
     Type.Object({
-        action: Type.Literal("delete"),
+        action: Type.Literal('delete'),
         event_id: Type.String({
-            description: "Event ID",
+            description: 'Event ID',
         }),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
         need_notification: Type.Optional(Type.Boolean({
-            description: "是否通知参会人（默认 true）",
+            description: '是否通知参会人（默认 true）',
         })),
     }),
     // SEARCH (P1)
     Type.Object({
-        action: Type.Literal("search"),
+        action: Type.Literal('search'),
         query: Type.String({
-            description: "搜索关键词",
+            description: '搜索关键词',
         }),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
         page_size: Type.Optional(Type.Number({
-            description: "每页数量",
+            description: '每页数量',
         })),
         page_token: Type.Optional(Type.String({
-            description: "分页标记",
+            description: '分页标记',
         })),
     }),
     // REPLY (P1)
     Type.Object({
-        action: Type.Literal("reply"),
+        action: Type.Literal('reply'),
         event_id: Type.String({
-            description: "Event ID",
+            description: 'Event ID',
         }),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
-        rsvp_status: Type.Union([
-            Type.Literal("accept"),
-            Type.Literal("decline"),
-            Type.Literal("tentative"),
-        ]),
+        rsvp_status: Type.Union([Type.Literal('accept'), Type.Literal('decline'), Type.Literal('tentative')]),
     }),
     // INSTANCES (P1)
     Type.Object({
-        action: Type.Literal("instances"),
+        action: Type.Literal('instances'),
         event_id: Type.String({
-            description: "重复日程的 Event ID",
+            description: '重复日程的 Event ID',
         }),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
         start_time: Type.String({
             description: "查询起始时间（ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'）",
@@ -232,15 +214,15 @@ const FeishuCalendarEventSchema = Type.Union([
             description: "查询结束时间（ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'）",
         }),
         page_size: Type.Optional(Type.Number({
-            description: "每页数量",
+            description: '每页数量',
         })),
         page_token: Type.Optional(Type.String({
-            description: "分页标记",
+            description: '分页标记',
         })),
     }),
     // INSTANCE_VIEW (P1)
     Type.Object({
-        action: Type.Literal("instance_view"),
+        action: Type.Literal('instance_view'),
         start_time: Type.String({
             description: "查询起始时间（ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'）",
         }),
@@ -248,56 +230,30 @@ const FeishuCalendarEventSchema = Type.Union([
             description: "查询结束时间（ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'）",
         }),
         calendar_id: Type.Optional(Type.String({
-            description: "Calendar ID (optional; primary calendar used if omitted)",
+            description: 'Calendar ID (optional; primary calendar used if omitted)',
         })),
         page_size: Type.Optional(Type.Number({
-            description: "每页数量",
+            description: '每页数量',
         })),
         page_token: Type.Optional(Type.String({
-            description: "分页标记",
+            description: '分页标记',
         })),
     }),
 ]);
-const SHANGHAI_UTC_OFFSET_HOURS = 8;
-const SHANGHAI_OFFSET_SUFFIX = "+08:00";
-function pad2(value) {
-    return String(value).padStart(2, "0");
-}
-function unixTimestampToISO8601(raw) {
-    if (raw === undefined || raw === null)
-        return null;
-    const text = typeof raw === "number" ? String(raw) : String(raw).trim();
-    if (!/^-?\d+$/.test(text))
-        return null;
-    const num = Number(text);
-    if (!Number.isFinite(num))
-        return null;
-    const utcMs = Math.abs(num) >= 1e12 ? num : num * 1000;
-    const beijingDate = new Date(utcMs + SHANGHAI_UTC_OFFSET_HOURS * 60 * 60 * 1000);
-    if (Number.isNaN(beijingDate.getTime()))
-        return null;
-    const year = beijingDate.getUTCFullYear();
-    const month = pad2(beijingDate.getUTCMonth() + 1);
-    const day = pad2(beijingDate.getUTCDate());
-    const hour = pad2(beijingDate.getUTCHours());
-    const minute = pad2(beijingDate.getUTCMinutes());
-    const second = pad2(beijingDate.getUTCSeconds());
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}${SHANGHAI_OFFSET_SUFFIX}`;
-}
 function normalizeCalendarTimeValue(value) {
     if (value === null || value === undefined)
         return undefined;
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
         const iso = unixTimestampToISO8601(value);
         return iso ?? value;
     }
-    if (typeof value !== "object")
+    if (typeof value !== 'object')
         return undefined;
     const timeObj = value;
     const fromTimestamp = unixTimestampToISO8601(timeObj.timestamp);
     if (fromTimestamp)
         return fromTimestamp;
-    if (typeof timeObj.date === "string")
+    if (typeof timeObj.date === 'string')
         return timeObj.date;
     return undefined;
 }
@@ -331,20 +287,28 @@ export function registerFeishuCalendarEventTool(api) {
     if (!api.config)
         return;
     const cfg = api.config;
-    const { toolClient, log } = createToolContext(api, "feishu_calendar_event");
+    const { toolClient, log } = createToolContext(api, 'feishu_calendar_event');
     const resolveCalendarId = async (client) => {
-        const primaryRes = await client.invoke("feishu_calendar_calendar.primary", (sdk, opts) => sdk.calendar.calendar.primary({}, opts), { as: "user" });
-        const cid = primaryRes.data?.calendars?.[0]?.calendar
-            ?.calendar_id;
+        const primaryRes = await client.invoke('feishu_calendar_calendar.primary', (sdk, opts) => sdk.calendar.calendar.primary({}, opts), { as: 'user' });
+        const data = primaryRes.data;
+        const cid = data?.calendars?.[0]?.calendar?.calendar_id;
         if (cid) {
             log.info(`resolveCalendarId: primary() returned calendar_id=${cid}`);
             return cid;
         }
         return null;
     };
+    const resolveCalendarIdOrFail = async (calendarId, client) => {
+        if (calendarId)
+            return calendarId;
+        const resolved = await resolveCalendarId(client);
+        if (!resolved)
+            throw new Error('Could not determine primary calendar');
+        return resolved;
+    };
     api.registerTool({
-        name: "feishu_calendar_event",
-        label: "Feishu Calendar Events",
+        name: 'feishu_calendar_event',
+        label: 'Feishu Calendar Events',
         description: "【以用户身份】飞书日程管理工具。当用户要求查看日程、创建会议、约会议、修改日程、删除日程、搜索日程、回复日程邀请时使用。Actions: create（创建日历事件）, list（查询时间范围内的日程，自动展开重复日程）, get（获取日程详情）, patch（更新日程）, delete（删除日程）, search（搜索日程）, reply（回复日程邀请）, instances（获取重复日程的实例列表，仅对重复日程有效）, instance_view（查看展开后的日程列表）。【重要】create 时必须传 user_open_id 参数，值为消息上下文中的 SenderId（格式 ou_xxx），否则日程只在应用日历上，用户完全看不到。list 操作使用 instance_view 接口，会自动展开重复日程为多个实例，时间区间不能超过40天，返回实例数量上限1000。时间参数使用ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'。",
         parameters: FeishuCalendarEventSchema,
         async execute(_toolCallId, params) {
@@ -355,37 +319,30 @@ export function registerFeishuCalendarEventTool(api) {
                     // -----------------------------------------------------------------
                     // CREATE EVENT
                     // -----------------------------------------------------------------
-                    case "create": {
+                    case 'create': {
                         if (!p.summary)
-                            return json({ error: "summary is required" });
+                            return json({ error: 'summary is required' });
                         if (!p.start_time)
-                            return json({ error: "start_time is required" });
+                            return json({ error: 'start_time is required' });
                         if (!p.end_time)
-                            return json({ error: "end_time is required" });
+                            return json({ error: 'end_time is required' });
                         const startTs = parseTimeToTimestamp(p.start_time);
                         const endTs = parseTimeToTimestamp(p.end_time);
                         if (!startTs || !endTs)
                             return json({
-                                error: "时间格式错误！必须使用ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'，例如 '2026-02-25 14:00:00'。不要传 Unix 时间戳数字。",
+                                error: "Invalid time format. Must use ISO 8601 / RFC 3339 with timezone, e.g. '2024-01-01T00:00:00+08:00' or '2026-02-25 14:00:00'. Do not pass Unix timestamp numbers.",
                                 received_start: p.start_time,
                                 received_end: p.end_time,
                             });
-                        log.info(`create: summary=${p.summary}, start_time=${p.start_time} -> ts=${startTs}, end_time=${p.end_time} -> ts=${endTs}, user_open_id=${p.user_open_id ?? "MISSING"}, attendees=${JSON.stringify(p.attendees ?? [])}, vchat=${p.vchat?.vc_type ?? "auto"}, location=${p.location?.name ?? "none"}`);
+                        log.info(`create: summary=${p.summary}, start_time=${p.start_time} -> ts=${startTs}, end_time=${p.end_time} -> ts=${endTs}, user_open_id=${p.user_open_id ?? 'MISSING'}, attendees=${JSON.stringify(p.attendees ?? [])}, vchat=${p.vchat?.vc_type ?? 'auto'}, location=${p.location?.name ?? 'none'}`);
                         // Resolve bot's calendar
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         const eventData = {
                             summary: p.summary,
                             start_time: { timestamp: startTs },
                             end_time: { timestamp: endTs },
                             need_notification: true,
-                            attendee_ability: p.attendee_ability ?? "can_modify_event",
+                            attendee_ability: p.attendee_ability ?? 'can_modify_event',
                         };
                         if (p.description)
                             eventData.description = p.description;
@@ -421,52 +378,49 @@ export function registerFeishuCalendarEventTool(api) {
                         }
                         // 提醒列表
                         if (p.reminders) {
-                            eventData.reminders = p.reminders.map(r => ({ minutes: r.minutes }));
+                            eventData.reminders = p.reminders.map((r) => ({ minutes: r.minutes }));
                         }
                         // 重复规则
                         if (p.recurrence)
                             eventData.recurrence = p.recurrence;
-                        const res = await client.invoke("feishu_calendar_event.create", (sdk, opts) => sdk.calendar.calendarEvent.create({
+                        const res = await client.invoke('feishu_calendar_event.create', (sdk, opts) => sdk.calendar.calendarEvent.create({
                             path: { calendar_id: calendarId },
                             data: eventData,
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
                         log.info(`event created: event_id=${res.data?.event?.event_id}`);
                         // Build attendee list: merge explicit attendees + user_open_id
-                        const allAttendees = [
-                            ...(p.attendees ?? []),
-                        ];
+                        const allAttendees = [...(p.attendees ?? [])];
                         if (p.user_open_id) {
-                            const alreadyIncluded = allAttendees.some((a) => a.type === "user" && a.id === p.user_open_id);
+                            const alreadyIncluded = allAttendees.some((a) => a.type === 'user' && a.id === p.user_open_id);
                             if (!alreadyIncluded) {
-                                allAttendees.push({ type: "user", id: p.user_open_id });
+                                allAttendees.push({ type: 'user', id: p.user_open_id });
                             }
                         }
                         log.info(`allAttendees=${JSON.stringify(allAttendees)}`);
                         let attendeeError;
-                        const operateId = p.user_open_id ??
-                            p.attendees?.find((a) => a.type === "user")?.id;
+                        const operateId = p.user_open_id ?? p.attendees?.find((a) => a.type === 'user')?.id;
                         if (allAttendees.length > 0 && res.data?.event?.event_id) {
                             const attendeeData = allAttendees.map((a) => ({
                                 type: a.type,
-                                user_id: a.type === "user" ? a.id : undefined,
-                                chat_id: a.type === "chat" ? a.id : undefined,
-                                room_id: a.type === "resource" ? a.id : undefined,
-                                third_party_email: a.type === "third_party" ? a.id : undefined,
+                                user_id: a.type === 'user' ? a.id : undefined,
+                                chat_id: a.type === 'chat' ? a.id : undefined,
+                                room_id: a.type === 'resource' ? a.id : undefined,
+                                third_party_email: a.type === 'third_party' ? a.id : undefined,
                                 operate_id: operateId,
                             }));
                             try {
-                                const attendeeRes = await client.invoke("feishu_calendar_event.create", (sdk, opts) => sdk.calendar.calendarEventAttendee.create({
+                                const attendeeRes = await client.invoke('feishu_calendar_event.create', (sdk, opts) => sdk.calendar.calendarEventAttendee.create({
                                     path: {
                                         calendar_id: calendarId,
                                         event_id: res.data?.event?.event_id,
                                     },
-                                    params: { user_id_type: "open_id" },
+                                    params: { user_id_type: 'open_id' },
                                     data: {
                                         attendees: attendeeData,
                                         need_notification: true,
                                     },
-                                }, opts), { as: "user" });
+                                }, opts), { as: 'user' });
                                 assertLarkOk(attendeeRes);
                                 log.info(`attendee API response: ${JSON.stringify(attendeeRes.data)}`);
                             }
@@ -476,7 +430,7 @@ export function registerFeishuCalendarEventTool(api) {
                             }
                         }
                         // Strip calendarId from app_link — it points to bot's calendar, users can't access it
-                        let appLink = res.data?.event?.app_link;
+                        const appLink = res.data?.event?.app_link;
                         const safeEvent = res.data?.event
                             ? {
                                 event_id: res.data.event.event_id,
@@ -507,7 +461,7 @@ export function registerFeishuCalendarEventTool(api) {
                         }
                         else if (allAttendees.length === 0) {
                             result.error =
-                                "日程已创建在应用日历上，但未添加任何参会人，用户看不到此日程。请重新调用时传入 user_open_id 参数。";
+                                '日程已创建在应用日历上，但未添加任何参会人，用户看不到此日程。请重新调用时传入 user_open_id 参数。';
                         }
                         else {
                             result.note = `已成功添加 ${allAttendees.length} 位参会人，日程应出现在参会人的飞书日历中。`;
@@ -517,62 +471,49 @@ export function registerFeishuCalendarEventTool(api) {
                     // -----------------------------------------------------------------
                     // LIST EVENTS (使用 instance_view 接口，自动展开重复日程)
                     // -----------------------------------------------------------------
-                    case "list": {
+                    case 'list': {
                         if (!p.start_time)
-                            return json({ error: "start_time is required" });
+                            return json({ error: 'start_time is required' });
                         if (!p.end_time)
-                            return json({ error: "end_time is required" });
+                            return json({ error: 'end_time is required' });
                         const startTs = parseTimeToTimestamp(p.start_time);
                         const endTs = parseTimeToTimestamp(p.end_time);
                         if (!startTs || !endTs)
                             return json({
-                                error: "时间格式错误！必须使用ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'，例如 '2026-02-25 14:00:00'。不要传 Unix 时间戳。",
+                                error: "Invalid time format. Must use ISO 8601 / RFC 3339 with timezone, e.g. '2024-01-01T00:00:00+08:00' or '2026-02-25 14:00:00'. Do not pass Unix timestamps.",
                                 received_start: p.start_time,
                                 received_end: p.end_time,
                             });
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         log.info(`list: calendar_id=${calendarId}, start_time=${startTs}, end_time=${endTs} (using instance_view)`);
-                        const res = await client.invoke("feishu_calendar_event.instance_view", (sdk, opts) => sdk.calendar.calendarEvent.instanceView({
+                        const res = await client.invoke('feishu_calendar_event.instance_view', (sdk, opts) => sdk.calendar.calendarEvent.instanceView({
                             path: { calendar_id: calendarId },
                             params: {
                                 start_time: startTs,
                                 end_time: endTs,
-                                user_id_type: "open_id",
+                                user_id_type: 'open_id',
                             },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
-                        log.info(`list: returned ${res.data?.items?.length ?? 0} event instances`);
+                        const data = res.data;
+                        log.info(`list: returned ${data?.items?.length ?? 0} event instances`);
                         return json({
-                            events: normalizeEventListTimeFields(res.data?.items),
-                            has_more: res.data?.has_more ?? false,
-                            page_token: res.data?.page_token,
+                            events: normalizeEventListTimeFields(data?.items),
+                            has_more: data?.has_more ?? false,
+                            page_token: data?.page_token,
                         });
                     }
                     // -----------------------------------------------------------------
                     // GET EVENT
                     // -----------------------------------------------------------------
-                    case "get": {
+                    case 'get': {
                         if (!p.event_id)
-                            return json({ error: "event_id is required" });
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                            return json({ error: 'event_id is required' });
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         log.info(`get: calendar_id=${calendarId}, event_id=${p.event_id}`);
-                        const res = await client.invoke("feishu_calendar_event.get", (sdk, opts) => sdk.calendar.calendarEvent.get({
+                        const res = await client.invoke('feishu_calendar_event.get', (sdk, opts) => sdk.calendar.calendarEvent.get({
                             path: { calendar_id: calendarId, event_id: p.event_id },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
                         log.info(`get: retrieved event ${p.event_id}`);
                         return json({
@@ -582,17 +523,10 @@ export function registerFeishuCalendarEventTool(api) {
                     // -----------------------------------------------------------------
                     // PATCH EVENT (P1)
                     // -----------------------------------------------------------------
-                    case "patch": {
+                    case 'patch': {
                         if (!p.event_id)
-                            return json({ error: "event_id is required" });
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                            return json({ error: 'event_id is required' });
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         const updateData = {};
                         // Handle time conversion if provided
                         if (p.start_time) {
@@ -619,11 +553,11 @@ export function registerFeishuCalendarEventTool(api) {
                             updateData.description = p.description;
                         if (p.location)
                             updateData.location = { name: p.location };
-                        log.info(`patch: calendar_id=${calendarId}, event_id=${p.event_id}, fields=${Object.keys(updateData).join(",")}`);
-                        const res = await client.invoke("feishu_calendar_event.patch", (sdk, opts) => sdk.calendar.calendarEvent.patch({
+                        log.info(`patch: calendar_id=${calendarId}, event_id=${p.event_id}, fields=${Object.keys(updateData).join(',')}`);
+                        const res = await client.invoke('feishu_calendar_event.patch', (sdk, opts) => sdk.calendar.calendarEvent.patch({
                             path: { calendar_id: calendarId, event_id: p.event_id },
                             data: updateData,
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
                         log.info(`patch: updated event ${p.event_id}`);
                         return json({
@@ -633,24 +567,17 @@ export function registerFeishuCalendarEventTool(api) {
                     // -----------------------------------------------------------------
                     // DELETE EVENT (P1)
                     // -----------------------------------------------------------------
-                    case "delete": {
+                    case 'delete': {
                         if (!p.event_id)
-                            return json({ error: "event_id is required" });
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                            return json({ error: 'event_id is required' });
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         log.info(`delete: calendar_id=${calendarId}, event_id=${p.event_id}, notify=${p.need_notification ?? true}`);
-                        const res = await client.invoke("feishu_calendar_event.delete", (sdk, opts) => sdk.calendar.calendarEvent.delete({
+                        const res = await client.invoke('feishu_calendar_event.delete', (sdk, opts) => sdk.calendar.calendarEvent.delete({
                             path: { calendar_id: calendarId, event_id: p.event_id },
                             params: {
                                 need_notification: (p.need_notification ?? true),
                             },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
                         log.info(`delete: deleted event ${p.event_id}`);
                         return json({
@@ -661,19 +588,12 @@ export function registerFeishuCalendarEventTool(api) {
                     // -----------------------------------------------------------------
                     // SEARCH EVENT (P1)
                     // -----------------------------------------------------------------
-                    case "search": {
+                    case 'search': {
                         if (!p.query)
-                            return json({ error: "query is required" });
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                            return json({ error: 'query is required' });
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         log.info(`search: calendar_id=${calendarId}, query=${p.query}, page_size=${p.page_size ?? 50}`);
-                        const res = await client.invoke("feishu_calendar_event.search", (sdk, opts) => sdk.calendar.calendarEvent.search({
+                        const res = await client.invoke('feishu_calendar_event.search', (sdk, opts) => sdk.calendar.calendarEvent.search({
                             path: { calendar_id: calendarId },
                             params: {
                                 page_size: p.page_size,
@@ -682,38 +602,32 @@ export function registerFeishuCalendarEventTool(api) {
                             data: {
                                 query: p.query,
                             },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
-                        log.info(`search: found ${res.data?.items?.length ?? 0} events`);
+                        const data = res.data;
+                        log.info(`search: found ${data?.items?.length ?? 0} events`);
                         return json({
-                            events: normalizeEventListTimeFields(res.data?.items),
-                            has_more: res.data?.has_more ?? false,
-                            page_token: res.data?.page_token,
+                            events: normalizeEventListTimeFields(data?.items),
+                            has_more: data?.has_more ?? false,
+                            page_token: data?.page_token,
                         });
                     }
                     // -----------------------------------------------------------------
                     // REPLY EVENT (P1)
                     // -----------------------------------------------------------------
-                    case "reply": {
+                    case 'reply': {
                         if (!p.event_id)
-                            return json({ error: "event_id is required" });
+                            return json({ error: 'event_id is required' });
                         if (!p.rsvp_status)
-                            return json({ error: "rsvp_status is required" });
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                            return json({ error: 'rsvp_status is required' });
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         log.info(`reply: calendar_id=${calendarId}, event_id=${p.event_id}, rsvp=${p.rsvp_status}`);
-                        const res = await client.invoke("feishu_calendar_event.reply", (sdk, opts) => sdk.calendar.calendarEvent.reply({
+                        const res = await client.invoke('feishu_calendar_event.reply', (sdk, opts) => sdk.calendar.calendarEvent.reply({
                             path: { calendar_id: calendarId, event_id: p.event_id },
                             data: {
                                 rsvp_status: p.rsvp_status,
                             },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
                         log.info(`reply: replied to event ${p.event_id} with ${p.rsvp_status}`);
                         return json({
@@ -725,31 +639,24 @@ export function registerFeishuCalendarEventTool(api) {
                     // -----------------------------------------------------------------
                     // INSTANCES (P1)
                     // -----------------------------------------------------------------
-                    case "instances": {
+                    case 'instances': {
                         if (!p.event_id)
-                            return json({ error: "event_id is required" });
+                            return json({ error: 'event_id is required' });
                         if (!p.start_time)
-                            return json({ error: "start_time is required" });
+                            return json({ error: 'start_time is required' });
                         if (!p.end_time)
-                            return json({ error: "end_time is required" });
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                            return json({ error: 'end_time is required' });
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         const startTs = parseTimeToTimestamp(p.start_time);
                         const endTs = parseTimeToTimestamp(p.end_time);
                         if (!startTs || !endTs)
                             return json({
-                                error: "时间格式错误！必须使用ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'",
+                                error: "Invalid time format. Must use ISO 8601 / RFC 3339 with timezone, e.g. '2024-01-01T00:00:00+08:00'",
                                 received_start: p.start_time,
                                 received_end: p.end_time,
                             });
                         log.info(`instances: calendar_id=${calendarId}, event_id=${p.event_id}, start=${startTs}, end=${endTs}`);
-                        const res = await client.invoke("feishu_calendar_event.instances", (sdk, opts) => sdk.calendar.calendarEvent.instances({
+                        const res = await client.invoke('feishu_calendar_event.instances', (sdk, opts) => sdk.calendar.calendarEvent.instances({
                             path: { calendar_id: calendarId, event_id: p.event_id },
                             params: {
                                 start_time: startTs,
@@ -757,54 +664,49 @@ export function registerFeishuCalendarEventTool(api) {
                                 page_size: p.page_size,
                                 page_token: p.page_token,
                             },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
-                        log.info(`instances: returned ${res.data?.items?.length ?? 0} instances`);
+                        const data = res.data;
+                        log.info(`instances: returned ${data?.items?.length ?? 0} instances`);
                         return json({
-                            instances: normalizeEventListTimeFields(res.data?.items),
-                            has_more: res.data?.has_more ?? false,
-                            page_token: res.data?.page_token,
+                            instances: normalizeEventListTimeFields(data?.items),
+                            has_more: data?.has_more ?? false,
+                            page_token: data?.page_token,
                         });
                     }
                     // -----------------------------------------------------------------
                     // INSTANCE_VIEW (P1)
                     // -----------------------------------------------------------------
-                    case "instance_view": {
+                    case 'instance_view': {
                         if (!p.start_time)
-                            return json({ error: "start_time is required" });
+                            return json({ error: 'start_time is required' });
                         if (!p.end_time)
-                            return json({ error: "end_time is required" });
-                        let calendarId = p.calendar_id;
-                        if (!calendarId) {
-                            calendarId = (await resolveCalendarId(client)) ?? undefined;
-                            if (!calendarId)
-                                return json({
-                                    error: "Could not determine primary calendar",
-                                });
-                        }
+                            return json({ error: 'end_time is required' });
+                        const calendarId = await resolveCalendarIdOrFail(p.calendar_id, client);
                         const startTs = parseTimeToTimestamp(p.start_time);
                         const endTs = parseTimeToTimestamp(p.end_time);
                         if (!startTs || !endTs)
                             return json({
-                                error: "时间格式错误！必须使用ISO 8601 / RFC 3339 格式（包含时区），例如 '2024-01-01T00:00:00+08:00'",
+                                error: "Invalid time format. Must use ISO 8601 / RFC 3339 with timezone, e.g. '2024-01-01T00:00:00+08:00'",
                                 received_start: p.start_time,
                                 received_end: p.end_time,
                             });
                         log.info(`instance_view: calendar_id=${calendarId}, start=${startTs}, end=${endTs}`);
-                        const res = await client.invoke("feishu_calendar_event.instance_view", (sdk, opts) => sdk.calendar.calendarEvent.instanceView({
+                        const res = await client.invoke('feishu_calendar_event.instance_view', (sdk, opts) => sdk.calendar.calendarEvent.instanceView({
                             path: { calendar_id: calendarId },
                             params: {
                                 start_time: startTs,
                                 end_time: endTs,
-                                user_id_type: "open_id",
+                                user_id_type: 'open_id',
                             },
-                        }, opts), { as: "user" });
+                        }, opts), { as: 'user' });
                         assertLarkOk(res);
-                        log.info(`instance_view: returned ${res.data?.items?.length ?? 0} events`);
+                        const data = res.data;
+                        log.info(`instance_view: returned ${data?.items?.length ?? 0} events`);
                         return json({
-                            events: normalizeEventListTimeFields(res.data?.items),
-                            has_more: res.data?.has_more ?? false,
-                            page_token: res.data?.page_token,
+                            events: normalizeEventListTimeFields(data?.items),
+                            has_more: data?.has_more ?? false,
+                            page_token: data?.page_token,
                         });
                     }
                 }
@@ -813,7 +715,7 @@ export function registerFeishuCalendarEventTool(api) {
                 return await handleInvokeErrorWithAutoAuth(err, cfg);
             }
         },
-    }, { name: "feishu_calendar_event" });
-    api.logger.info?.("feishu_calendar_event: Registered feishu_calendar_event tool");
+    }, { name: 'feishu_calendar_event' });
+    api.logger.info?.('feishu_calendar_event: Registered feishu_calendar_event tool');
 }
 //# sourceMappingURL=event.js.map

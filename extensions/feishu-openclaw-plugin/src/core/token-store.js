@@ -17,18 +17,19 @@
  *   Account  = "{appId}:{userOpenId}"
  *   Password = JSON-serialised StoredUAToken
  */
-import { execFile as execFileCb } from "node:child_process";
-import { promisify } from "node:util";
-import { mkdir, unlink, readFile, writeFile, chmod } from "node:fs/promises";
-import { join } from "node:path";
-import { homedir } from "node:os";
-import { randomBytes, createCipheriv, createDecipheriv } from "node:crypto";
-import { trace } from "./trace.js";
+import { execFile as execFileCb } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdir, unlink, readFile, writeFile, chmod } from 'node:fs/promises';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
+import { larkLogger } from './lark-logger';
+const log = larkLogger('core/token-store');
 const execFile = promisify(execFileCb);
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const KEYCHAIN_SERVICE = "openclaw-feishu-uat";
+const KEYCHAIN_SERVICE = 'openclaw-feishu-uat';
 /** Refresh proactively when access_token expires within this window. */
 const REFRESH_AHEAD_MS = 5 * 60 * 1000; // 5 minutes
 // ---------------------------------------------------------------------------
@@ -40,7 +41,7 @@ function accountKey(appId, userOpenId) {
 /** Mask a token for safe logging: only the last 4 chars are visible. */
 export function maskToken(token) {
     if (token.length <= 8)
-        return "****";
+        return '****';
     return `****${token.slice(-4)}`;
 }
 // ---------------------------------------------------------------------------
@@ -49,12 +50,7 @@ export function maskToken(token) {
 const darwinBackend = {
     async get(service, account) {
         try {
-            const { stdout } = await execFile("security", [
-                "find-generic-password",
-                "-s", service,
-                "-a", account,
-                "-w",
-            ]);
+            const { stdout } = await execFile('security', ['find-generic-password', '-s', service, '-a', account, '-w']);
             return stdout.trim() || null;
         }
         catch {
@@ -64,29 +60,16 @@ const darwinBackend = {
     async set(service, account, data) {
         // Delete first – `add-generic-password` fails if the item already exists.
         try {
-            await execFile("security", [
-                "delete-generic-password",
-                "-s", service,
-                "-a", account,
-            ]);
+            await execFile('security', ['delete-generic-password', '-s', service, '-a', account]);
         }
         catch {
             // Not found – fine.
         }
-        await execFile("security", [
-            "add-generic-password",
-            "-s", service,
-            "-a", account,
-            "-w", data,
-        ]);
+        await execFile('security', ['add-generic-password', '-s', service, '-a', account, '-w', data]);
     },
     async remove(service, account) {
         try {
-            await execFile("security", [
-                "delete-generic-password",
-                "-s", service,
-                "-a", account,
-            ]);
+            await execFile('security', ['delete-generic-password', '-s', service, '-a', account]);
         }
         catch {
             // Already absent – fine.
@@ -101,14 +84,14 @@ const darwinBackend = {
 //
 // Storage path: ${XDG_DATA_HOME:-~/.local/share}/openclaw-feishu-uat/
 // ---------------------------------------------------------------------------
-const LINUX_UAT_DIR = join(process.env.XDG_DATA_HOME || join(homedir(), ".local", "share"), "openclaw-feishu-uat");
-const MASTER_KEY_PATH = join(LINUX_UAT_DIR, "master.key");
+const LINUX_UAT_DIR = join(process.env.XDG_DATA_HOME || join(homedir(), '.local', 'share'), 'openclaw-feishu-uat');
+const MASTER_KEY_PATH = join(LINUX_UAT_DIR, 'master.key');
 const MASTER_KEY_BYTES = 32; // AES-256
 const IV_BYTES = 12; // GCM recommended
 const TAG_BYTES = 16; // GCM auth tag
 /** Convert account key to a filesystem-safe filename. */
 function linuxSafeFileName(account) {
-    return account.replace(/[^a-zA-Z0-9._-]/g, "_") + ".enc";
+    return account.replace(/[^a-zA-Z0-9._-]/g, '_') + '.enc';
 }
 /** Ensure the credentials directory exists with mode 0700. */
 async function ensureLinuxCredDir() {
@@ -125,26 +108,25 @@ async function getMasterKey() {
         const key = await readFile(MASTER_KEY_PATH);
         if (key.length === MASTER_KEY_BYTES)
             return key;
-        trace.warn("token-store: master key has unexpected length, regenerating");
+        log.warn('master key has unexpected length, regenerating');
     }
     catch (err) {
-        if (!(err instanceof Error) ||
-            err.code !== "ENOENT") {
-            trace.warn(`token-store: failed to read master key: ${err instanceof Error ? err.message : err}`);
+        if (!(err instanceof Error) || err.code !== 'ENOENT') {
+            log.warn(`failed to read master key: ${err instanceof Error ? err.message : err}`);
         }
     }
     await ensureLinuxCredDir();
     const key = randomBytes(MASTER_KEY_BYTES);
     await writeFile(MASTER_KEY_PATH, key, { mode: 0o600 });
     await chmod(MASTER_KEY_PATH, 0o600);
-    trace.info("token-store: generated new master key for encrypted file storage");
+    log.info('generated new master key for encrypted file storage');
     return key;
 }
 /** AES-256-GCM encrypt. Returns [12-byte IV][16-byte tag][ciphertext]. */
 function encryptData(plaintext, key) {
     const iv = randomBytes(IV_BYTES);
-    const cipher = createCipheriv("aes-256-gcm", key, iv);
-    const enc = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
     return Buffer.concat([iv, cipher.getAuthTag(), enc]);
 }
 /** AES-256-GCM decrypt. Returns plaintext or `null` on failure. */
@@ -155,9 +137,9 @@ function decryptData(data, key) {
         const iv = data.subarray(0, IV_BYTES);
         const tag = data.subarray(IV_BYTES, IV_BYTES + TAG_BYTES);
         const enc = data.subarray(IV_BYTES + TAG_BYTES);
-        const decipher = createDecipheriv("aes-256-gcm", key, iv);
+        const decipher = createDecipheriv('aes-256-gcm', key, iv);
         decipher.setAuthTag(tag);
-        return Buffer.concat([decipher.update(enc), decipher.final()]).toString("utf8");
+        return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
     }
     catch {
         return null;
@@ -203,12 +185,11 @@ const linuxBackend = {
 //
 // Storage path: %LOCALAPPDATA%\openclaw-feishu-uat\
 // ---------------------------------------------------------------------------
-const WIN32_UAT_DIR = join(process.env.LOCALAPPDATA ??
-    join(process.env.USERPROFILE ?? homedir(), "AppData", "Local"), KEYCHAIN_SERVICE);
-const WIN32_MASTER_KEY_PATH = join(WIN32_UAT_DIR, "master.key");
+const WIN32_UAT_DIR = join(process.env.LOCALAPPDATA ?? join(process.env.USERPROFILE ?? homedir(), 'AppData', 'Local'), KEYCHAIN_SERVICE);
+const WIN32_MASTER_KEY_PATH = join(WIN32_UAT_DIR, 'master.key');
 /** Convert account key to a filesystem-safe filename (whitelist approach). */
 function win32SafeFileName(account) {
-    return account.replace(/[^a-zA-Z0-9._-]/g, "_") + ".enc";
+    return account.replace(/[^a-zA-Z0-9._-]/g, '_') + '.enc';
 }
 async function ensureWin32CredDir() {
     await mkdir(WIN32_UAT_DIR, { recursive: true });
@@ -218,18 +199,17 @@ async function getWin32MasterKey() {
         const key = await readFile(WIN32_MASTER_KEY_PATH);
         if (key.length === MASTER_KEY_BYTES)
             return key;
-        trace.warn("token-store: win32 master key has unexpected length, regenerating");
+        log.warn('win32 master key has unexpected length, regenerating');
     }
     catch (err) {
-        if (!(err instanceof Error) ||
-            err.code !== "ENOENT") {
-            trace.warn(`token-store: failed to read win32 master key: ${err instanceof Error ? err.message : err}`);
+        if (!(err instanceof Error) || err.code !== 'ENOENT') {
+            log.warn(`failed to read win32 master key: ${err instanceof Error ? err.message : err}`);
         }
     }
     await ensureWin32CredDir();
     const key = randomBytes(MASTER_KEY_BYTES);
     await writeFile(WIN32_MASTER_KEY_PATH, key);
-    trace.info("token-store: generated new master key for win32 encrypted file storage");
+    log.info('generated new master key for win32 encrypted file storage');
     return key;
 }
 const win32Backend = {
@@ -264,14 +244,14 @@ const win32Backend = {
 // ---------------------------------------------------------------------------
 function createBackend() {
     switch (process.platform) {
-        case "darwin":
+        case 'darwin':
             return darwinBackend;
-        case "linux":
+        case 'linux':
             return linuxBackend;
-        case "win32":
+        case 'win32':
             return win32Backend;
         default:
-            trace.warn(`token-store: unsupported platform "${process.platform}", falling back to macOS backend`);
+            log.warn(`unsupported platform "${process.platform}", falling back to macOS backend`);
             return darwinBackend;
     }
 }
@@ -303,14 +283,14 @@ export async function setStoredToken(token) {
     const key = accountKey(token.appId, token.userOpenId);
     const payload = JSON.stringify(token);
     await backend.set(KEYCHAIN_SERVICE, key, payload);
-    trace.info(`token-store: saved UAT for ${token.userOpenId} (at:${maskToken(token.accessToken)})`);
+    log.info(`saved UAT for ${token.userOpenId} (at:${maskToken(token.accessToken)})`);
 }
 /**
  * Remove a stored UAT from the credential store.
  */
 export async function removeStoredToken(appId, userOpenId) {
     await backend.remove(KEYCHAIN_SERVICE, accountKey(appId, userOpenId));
-    trace.info(`token-store: removed UAT for ${userOpenId}`);
+    log.info(`removed UAT for ${userOpenId}`);
 }
 // ---------------------------------------------------------------------------
 // Token validity check
@@ -325,11 +305,11 @@ export async function removeStoredToken(appId, userOpenId) {
 export function tokenStatus(token) {
     const now = Date.now();
     if (now < token.expiresAt - REFRESH_AHEAD_MS) {
-        return "valid";
+        return 'valid';
     }
     if (now < token.refreshExpiresAt) {
-        return "needs_refresh";
+        return 'needs_refresh';
     }
-    return "expired";
+    return 'expired';
 }
 //# sourceMappingURL=token-store.js.map

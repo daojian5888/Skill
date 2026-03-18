@@ -2,7 +2,11 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
- * Shared per-chat task queue.
+ * Process-level chat task queue.
+ *
+ * Although located in channel/, this module is intentionally shared
+ * across channel, messaging, tools, and card layers as a process-level
+ * singleton. Consumers: monitor.ts, dispatch.ts, oauth.ts, auto-auth.ts.
  *
  * Ensures tasks targeting the same account+chat are executed serially.
  * Used by both websocket inbound messages and synthetic message paths.
@@ -36,7 +40,7 @@ export function enqueueFeishuChatTask(params) {
     const { accountId, chatId, threadId, task } = params;
     const key = buildQueueKey(accountId, chatId, threadId);
     const prev = chatQueues.get(key) ?? Promise.resolve();
-    const status = chatQueues.has(key) ? "queued" : "immediate";
+    const status = chatQueues.has(key) ? 'queued' : 'immediate';
     const next = prev.then(task, task); // continue queue even if previous task failed
     chatQueues.set(key, next);
     const cleanup = () => {
@@ -46,5 +50,10 @@ export function enqueueFeishuChatTask(params) {
     };
     next.then(cleanup, cleanup);
     return { status, promise: next };
+}
+/** @internal Test-only: reset all queue and dispatcher state. */
+export function _resetChatQueueState() {
+    chatQueues.clear();
+    activeDispatchers.clear();
 }
 //# sourceMappingURL=chat-queue.js.map

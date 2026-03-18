@@ -7,19 +7,26 @@
  * Builds the agent envelope, prepends chat history context, and
  * dispatches through the appropriate reply path (system command
  * vs. normal streaming/static flow).
+ *
+ * Implementation details are split across focused modules:
+ * - dispatch-context.ts  — DispatchContext type, route/session/event
+ * - dispatch-builders.ts — pure payload/body/envelope construction
+ * - dispatch-commands.ts — system command & permission notification
  */
-import type { ClawdbotConfig, RuntimeEnv, HistoryEntry } from "openclaw/plugin-sdk";
-import type { MessageContext } from "../types.js";
-import type { LarkAccount } from "../../core/types.js";
-import type { FeishuGroupConfig } from "../../core/types.js";
-import type { PermissionError } from "./permission.js";
+import type { RuntimeEnv, HistoryEntry } from 'openclaw/plugin-sdk';
+import type { MessageContext } from '../types';
+import type { LarkAccount } from '../../core/types';
+import type { FeishuGroupConfig } from '../../core/types';
+import type { PermissionError } from './permission';
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
 export declare function dispatchToAgent(params: {
     ctx: MessageContext;
     permissionError?: PermissionError;
     mediaPayload: Record<string, unknown>;
     quotedContent?: string;
     account: LarkAccount;
-    cfg: ClawdbotConfig;
+    /** account 级别的 ClawdbotConfig（channels.feishu 已替换为 per-account 合并后的配置） */
+    accountScopedCfg: ClawdbotConfig;
     runtime?: RuntimeEnv;
     chatHistories?: Map<string, HistoryEntry[]>;
     historyLimit: number;

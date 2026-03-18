@@ -7,20 +7,20 @@
  * Provides functions to add, remove, and list emoji reactions on Feishu
  * messages using the IM Message Reaction API.
  */
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { OpenClawConfig } from 'openclaw/plugin-sdk';
 /**
  * Represents a single reaction on a Feishu message.
  */
-export type FeishuReaction = {
+export interface FeishuReaction {
     /** Unique reaction ID assigned by the platform. */
     reactionId: string;
     /** The emoji type string (e.g. "THUMBSUP", "HEART"). */
     emojiType: string;
     /** Whether the reaction was added by an app or a human user. */
-    operatorType: "app" | "user";
+    operatorType: 'app' | 'user';
     /** Open ID of the operator who added the reaction. */
     operatorId: string;
-};
+}
 /**
  * Well-known Feishu emoji type strings.
  *

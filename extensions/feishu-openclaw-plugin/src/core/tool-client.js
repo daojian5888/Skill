@@ -27,102 +27,22 @@
  * );
  * ```
  */
-import * as Lark from "@larksuiteoapi/node-sdk";
-import { getLarkAccount, getEnabledLarkAccounts } from "./accounts.js";
-import { LarkClient } from "./lark-client.js";
-import { getTraceContext, feishuFetch } from "./trace.js";
-import { callWithUAT, NeedAuthorizationError } from "./uat-client.js";
-import { getStoredToken } from "./token-store.js";
-import { getAppGrantedScopes, invalidateAppScopeCache, missingScopes, } from "./app-scope-checker.js";
-import { getAppOwnerFallback } from "./app-owner-fallback.js";
-import { getRequiredScopes } from "./scope-manager.js";
-export { NeedAuthorizationError };
-/**
- * 应用缺少 application:application:self_manage 权限，无法查询应用权限配置。
- *
- * 需要管理员在飞书开放平台开通 application:application:self_manage 权限。
- */
-export class AppScopeCheckFailedError extends Error {
-    /** 应用 ID，用于生成开放平台权限管理链接。 */
-    appId;
-    constructor(appId) {
-        super("应用缺少 application:application:self_manage 权限，无法查询应用权限配置。请管理员在开放平台开通该权限。");
-        this.name = "AppScopeCheckFailedError";
-        this.appId = appId;
-    }
-}
-/**
- * 应用未开通 OAPI 所需 scope。
- *
- * 需要管理员在飞书开放平台开通权限。
- */
-export class AppScopeMissingError extends Error {
-    apiName;
-    /** OAPI 需要但 APP 未开通的 scope 列表。 */
-    missingScopes;
-    /** 应用 ID，用于生成开放平台权限管理链接。 */
-    appId;
-    scopeNeedType;
-    /** 触发此错误时使用的 token 类型，用于保持 card action 二次校验一致。 */
-    tokenType;
-    constructor(info, scopeNeedType, tokenType) {
-        if (scopeNeedType === "one") {
-            super(`应用缺少权限 [${info.scopes.join(", ")}](开启任一权限即可)，请管理员在开放平台开通。`);
-        }
-        else {
-            super(`应用缺少权限 [${info.scopes.join(", ")}]，请管理员在开放平台开通。`);
-        }
-        this.name = "AppScopeMissingError";
-        this.apiName = info.apiName;
-        this.missingScopes = info.scopes;
-        this.appId = info.appId;
-        this.scopeNeedType = scopeNeedType;
-        this.tokenType = tokenType;
-    }
-}
-/**
- * 用户未授权或 scope 不足，需要发起 OAuth 授权。
- *
- * `requiredScopes` 为 APP∩OAPI 的有效 scope，可直接传给
- * `feishu_oauth authorize --scope`。
- */
-export class UserAuthRequiredError extends Error {
-    userOpenId;
-    apiName;
-    /** APP∩OAPI 交集 scope，传给 OAuth authorize。 */
-    requiredScopes;
-    /** 应用 scope 是否已验证通过。false 时 requiredScopes 可能不准确。 */
-    appScopeVerified;
-    /** 应用 ID，用于生成开放平台权限管理链接。 */
-    appId;
-    constructor(userOpenId, info) {
-        super("need_user_authorization");
-        this.name = "UserAuthRequiredError";
-        this.userOpenId = userOpenId;
-        this.apiName = info.apiName;
-        this.requiredScopes = info.scopes;
-        this.appId = info.appId;
-        this.appScopeVerified = info.appScopeVerified ?? true;
-    }
-}
-/**
- * 服务端报 99991679 — 用户 token 的 scope 不足。
- *
- * 需要增量授权：用缺失的 scope 发起新 Device Flow。
- */
-export class UserScopeInsufficientError extends Error {
-    userOpenId;
-    apiName;
-    /** 缺失的 scope 列表。 */
-    missingScopes;
-    constructor(userOpenId, info) {
-        super("user_scope_insufficient");
-        this.name = "UserScopeInsufficientError";
-        this.userOpenId = userOpenId;
-        this.apiName = info.apiName;
-        this.missingScopes = info.scopes;
-    }
-}
+import * as Lark from '@larksuiteoapi/node-sdk';
+import { getLarkAccount, getEnabledLarkAccounts } from './accounts';
+import { LarkClient } from './lark-client';
+import { getTicket } from './lark-ticket';
+import { callWithUAT } from './uat-client';
+import { getStoredToken } from './token-store';
+import { getAppGrantedScopes, invalidateAppScopeCache, missingScopes } from './app-scope-checker';
+import { getAppOwnerFallback } from './app-owner-fallback';
+import { larkLogger } from './lark-logger';
+import { getRequiredScopes } from './scope-manager';
+import { rawLarkRequest } from './raw-request';
+import { assertOwnerAccessStrict } from './owner-policy';
+import { LARK_ERROR, NeedAuthorizationError, AppScopeCheckFailedError, AppScopeMissingError, UserAuthRequiredError, UserScopeInsufficientError, } from './auth-errors';
+// Re-export for backward compatibility — 下游模块可继续从 tool-client 导入
+export { LARK_ERROR, NeedAuthorizationError, AppScopeCheckFailedError, AppScopeMissingError, UserAuthRequiredError, UserScopeInsufficientError, };
+const tcLog = larkLogger('core/tool-client');
 // ---------------------------------------------------------------------------
 // ToolClient
 // ---------------------------------------------------------------------------
@@ -130,7 +50,7 @@ export class ToolClient {
     config;
     /** 当前解析的账号信息（appId、appSecret 保证存在）。 */
     account;
-    /** 当前请求的用户 open_id（来自 TraceContext，可能为 undefined）。 */
+    /** 当前请求的用户 open_id（来自 LarkTicket，可能为 undefined）。 */
     senderOpenId;
     /** Lark SDK 实例（TAT 身份），直接调用即可。 */
     sdk;
@@ -189,27 +109,29 @@ export class ToolClient {
         // 检查旧版插件是否已禁用 (error)
         const feishuEntry = this.config.plugins?.entries?.feishu;
         if (feishuEntry && feishuEntry.enabled !== false) {
-            throw new Error("❌ 检测到旧版插件未禁用。\n" +
-                "👉 请依次运行命令：\n" +
-                "```\n" +
-                "openclaw config set plugins.entries.feishu.enabled false --json\n" +
-                "openclaw gateway restart\n" +
-                "```");
+            throw new Error('❌ 检测到旧版插件未禁用。\n' +
+                '👉 请依次运行命令：\n' +
+                '```\n' +
+                'openclaw config set plugins.entries.feishu.enabled false --json\n' +
+                'openclaw gateway restart\n' +
+                '```');
         }
         // 2. 从 scope.ts 查询 API 需要的 scopes（Required Scopes）
         const requiredScopes = getRequiredScopes(toolAction);
         // 3. 决定 token 类型（默认 user，用户可通过 options.as 覆盖）
-        const tokenType = options?.as ?? "user";
+        const tokenType = options?.as ?? 'user';
         // ---- App Granted Scopes 检查（应用已开通的权限）----
-        // 查询应用在飞书开放平台已开通的 scope，检查是否满足 Required Scopes
+        // UAT 调用额外检查 offline_access（OAuth Device Flow 的前提权限），
+        // 但不加入 requiredScopes（避免阻断业务 scope 进入用户授权流程）。
+        const appCheckScopes = tokenType === 'user' ? [...new Set([...requiredScopes, 'offline_access'])] : requiredScopes;
         let appScopeVerified = true;
-        if (requiredScopes.length > 0) {
+        if (appCheckScopes.length > 0) {
             const appGrantedScopes = await getAppGrantedScopes(this.sdk, this.account.appId, tokenType);
             if (appGrantedScopes.length > 0) {
-                // 严格模式：应用必须开通所有 Required Scopes
-                const missingAppScopes = missingScopes(appGrantedScopes, requiredScopes);
+                // 严格模式：应用必须开通所有 Required Scopes（+ offline_access）
+                const missingAppScopes = missingScopes(appGrantedScopes, appCheckScopes);
                 if (missingAppScopes.length > 0) {
-                    throw new AppScopeMissingError({ apiName: toolAction, scopes: missingAppScopes, appId: this.account.appId }, "all", tokenType);
+                    throw new AppScopeMissingError({ apiName: toolAction, scopes: missingAppScopes, appId: this.account.appId }, 'all', tokenType, requiredScopes);
                 }
             }
             else {
@@ -219,7 +141,7 @@ export class ToolClient {
             }
         }
         // 5. 执行调用
-        if (tokenType === "tenant") {
+        if (tokenType === 'tenant') {
             return this.invokeAsTenant(toolAction, fn, requiredScopes);
         }
         // 5.1 获取 userOpenId，支持兜底逻辑
@@ -229,8 +151,11 @@ export class ToolClient {
             const fallbackUserId = await getAppOwnerFallback(this.account, this.sdk);
             if (fallbackUserId) {
                 userOpenId = fallbackUserId;
-                console.log(`[tool-client] Using app owner as fallback user ` +
-                    `(toolAction=${toolAction}, appId=${this.account.appId}, ownerId=${fallbackUserId})`);
+                tcLog.info(`Using app owner as fallback user`, {
+                    toolAction,
+                    appId: this.account.appId,
+                    ownerId: fallbackUserId,
+                });
             }
         }
         return this.invokeAsUser(toolAction, fn, requiredScopes, userOpenId, appScopeVerified);
@@ -267,6 +192,7 @@ export class ToolClient {
      * );
      * ```
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async invokeByPath(toolAction, path, options) {
         const fn = async (_sdk, _opts, uat) => {
             return this.rawRequest(path, {
@@ -287,7 +213,7 @@ export class ToolClient {
             return await fn(this.sdk);
         }
         catch (err) {
-            this.rethrowStructuredError(err, toolAction, requiredScopes, undefined, "tenant");
+            this.rethrowStructuredError(err, toolAction, requiredScopes, undefined, 'tenant');
             throw err;
         }
     }
@@ -296,13 +222,15 @@ export class ToolClient {
     // -------------------------------------------------------------------------
     async invokeAsUser(toolAction, fn, requiredScopes, userOpenId, appScopeVerified) {
         if (!userOpenId) {
-            throw new UserAuthRequiredError("unknown", {
+            throw new UserAuthRequiredError('unknown', {
                 apiName: toolAction,
                 scopes: requiredScopes,
                 appScopeVerified,
                 appId: this.account.appId,
             });
         }
+        // Owner 检查：非 owner 用户直接拒绝（从 uat-client.ts 迁移至此）
+        await assertOwnerAccessStrict(this.account, this.sdk, userOpenId);
         // 预检：是否有已存储的 token
         const stored = await getStoredToken(this.account.appId, userOpenId);
         if (!stored) {
@@ -318,12 +246,12 @@ export class ToolClient {
         // 仅在 App Granted Scopes 检查成功时进行本地预检。
         // 当 App Scope 检查失败时（appScopeVerified=false），跳过预检，
         // 让请求走到服务端 — 服务端会返回准确的错误码：
-        //   99991672 → App Granted Scopes 缺失（管理员需在开放平台开通）
-        //   99991679 → User Granted Scopes 缺失（需引导用户 OAuth 授权）
+        //   LARK_ERROR.APP_SCOPE_MISSING (99991672) → App Granted Scopes 缺失（管理员需在开放平台开通）
+        //   LARK_ERROR.USER_SCOPE_INSUFFICIENT (99991679) → User Granted Scopes 缺失（需引导用户 OAuth 授权）
         if (appScopeVerified && stored.scope && requiredScopes.length > 0) {
             // 检查用户是否授权了所有 Required Scopes
             const userGrantedScopes = new Set(stored.scope.split(/\s+/).filter(Boolean));
-            const missingUserScopes = requiredScopes.filter(s => !userGrantedScopes.has(s));
+            const missingUserScopes = requiredScopes.filter((s) => !userGrantedScopes.has(s));
             if (missingUserScopes.length > 0) {
                 throw new UserAuthRequiredError(userOpenId, {
                     apiName: toolAction,
@@ -350,7 +278,7 @@ export class ToolClient {
                     appScopeVerified,
                 });
             }
-            this.rethrowStructuredError(err, toolAction, requiredScopes, userOpenId, "user");
+            this.rethrowStructuredError(err, toolAction, requiredScopes, userOpenId, 'user');
             throw err;
         }
     }
@@ -358,42 +286,14 @@ export class ToolClient {
     // Private: raw HTTP request
     // -------------------------------------------------------------------------
     /**
-     * 发起 raw HTTP 请求到飞书 API，自动处理域名解析、header 注入和错误检测。
+     * 发起 raw HTTP 请求到飞书 API，委托 rawLarkRequest 处理。
      */
     async rawRequest(path, options) {
-        const baseUrl = resolveDomainUrl(this.account.brand);
-        const url = new URL(path, baseUrl);
-        if (options.query) {
-            for (const [k, v] of Object.entries(options.query)) {
-                url.searchParams.set(k, v);
-            }
-        }
-        const headers = {};
-        if (options.accessToken) {
-            headers["Authorization"] = `Bearer ${options.accessToken}`;
-        }
-        if (options.body !== undefined) {
-            headers["Content-Type"] = "application/json";
-        }
-        if (options.headers) {
-            Object.assign(headers, options.headers);
-        }
-        const resp = await feishuFetch(url.toString(), {
-            method: options.method ?? "GET",
-            headers,
-            ...(options.body !== undefined
-                ? { body: JSON.stringify(options.body) }
-                : {}),
+        return rawLarkRequest({
+            brand: this.account.brand,
+            path,
+            ...options,
         });
-        const data = (await resp.json());
-        // 飞书 API 统一错误模式：code !== 0
-        if (data.code !== undefined && data.code !== 0) {
-            const err = new Error(data.msg ?? `Lark API error: code=${data.code}`);
-            err.code = data.code;
-            err.msg = data.msg;
-            throw err;
-        }
-        return data;
     }
     // -------------------------------------------------------------------------
     // Private: structured error detection
@@ -401,52 +301,29 @@ export class ToolClient {
     /**
      * 识别飞书服务端错误码并转换为结构化错误。
      *
-     * - 99991672 → AppScopeMissingError（清缓存后抛出）
-     * - 99991679 → UserScopeInsufficientError
+     * - LARK_ERROR.APP_SCOPE_MISSING (99991672) → AppScopeMissingError（清缓存后抛出）
+     * - LARK_ERROR.USER_SCOPE_INSUFFICIENT (99991679) → UserScopeInsufficientError
      */
     rethrowStructuredError(err, apiName, effectiveScopes, userOpenId, tokenType) {
-        const code = err?.code ?? err?.response?.data?.code;
-        if (code === 99991672) {
+        const code = 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        err?.code ?? err?.response?.data?.code;
+        if (code === LARK_ERROR.APP_SCOPE_MISSING) {
             // 应用 scope 不足 — 清缓存（管理员可能刚开通）
             invalidateAppScopeCache(this.account.appId);
             throw new AppScopeMissingError({
                 apiName,
                 scopes: effectiveScopes,
                 appId: this.account.appId,
-            }, "all", tokenType);
+            }, 'all', tokenType);
         }
-        if (code === 99991679 && userOpenId) {
+        if (code === LARK_ERROR.USER_SCOPE_INSUFFICIENT && userOpenId) {
             throw new UserScopeInsufficientError(userOpenId, {
                 apiName,
                 scopes: effectiveScopes,
             });
         }
     }
-    async asUser(...args) {
-        const [userOpenId, fn] = args.length === 1
-            ? [this.senderOpenId, args[0]]
-            : [args[0], args[1]];
-        if (!userOpenId) {
-            throw new NeedAuthorizationError("unknown");
-        }
-        return callWithUAT({
-            userOpenId,
-            appId: this.account.appId,
-            appSecret: this.account.appSecret,
-            domain: this.account.brand,
-        }, (accessToken) => fn(this.sdk, Lark.withUserAccessToken(accessToken)));
-    }
-}
-// ---------------------------------------------------------------------------
-// Domain URL resolution
-// ---------------------------------------------------------------------------
-/** 将 LarkBrand 映射为 API base URL。 */
-function resolveDomainUrl(brand) {
-    const map = {
-        feishu: "https://open.feishu.cn",
-        lark: "https://open.larksuite.com",
-    };
-    return map[brand] ?? `https://${brand}`;
 }
 // ---------------------------------------------------------------------------
 // Factory
@@ -454,28 +331,33 @@ function resolveDomainUrl(brand) {
 /**
  * 从配置创建 {@link ToolClient}。
  *
- * 自动从当前 {@link TraceContext} 解析 accountId 和 senderOpenId。
- * 如果 TraceContext 不可用（如非消息场景），回退到 `accountIndex`
+ * 自动从当前 {@link LarkTicket} 解析 accountId 和 senderOpenId。
+ * 如果 LarkTicket 不可用（如非消息场景），回退到 `accountIndex`
  * 指定的账号。
  *
  * @param config - OpenClaw 配置对象
  * @param accountIndex - 回退账号索引（默认 0）
  */
 export function createToolClient(config, accountIndex = 0) {
-    const traceCtx = getTraceContext();
+    const ticket = getTicket();
     // 1. 解析账号
     let account;
-    if (traceCtx?.accountId) {
-        const resolved = getLarkAccount(config, traceCtx.accountId);
-        if (resolved.enabled && resolved.configured) {
-            account = resolved;
+    if (ticket?.accountId) {
+        const resolved = getLarkAccount(config, ticket.accountId);
+        if (!resolved.configured) {
+            throw new Error(`Feishu account "${ticket.accountId}" is not configured (missing appId or appSecret). ` +
+                `Please check channels.feishu.accounts.${ticket.accountId} in your config.`);
         }
+        if (!resolved.enabled) {
+            throw new Error(`Feishu account "${ticket.accountId}" is disabled. ` +
+                `Set channels.feishu.accounts.${ticket.accountId}.enabled to true, or remove it to use defaults.`);
+        }
+        account = resolved;
     }
     if (!account) {
         const accounts = getEnabledLarkAccounts(config);
         if (accounts.length === 0) {
-            throw new Error("No enabled Feishu accounts configured. " +
-                "Please add appId and appSecret in config under channels.feishu");
+            throw new Error('No enabled Feishu accounts configured. ' + 'Please add appId and appSecret in config under channels.feishu');
         }
         if (accountIndex >= accounts.length) {
             throw new Error(`Requested account index ${accountIndex} but only ${accounts.length} accounts available`);
@@ -486,12 +368,12 @@ export function createToolClient(config, accountIndex = 0) {
         }
         account = fallback;
     }
-    // 2. 获取 SDK 实例（复用 LarkClient 的缓存和 httpHeaders 注入）
+    // 2. 获取 SDK 实例（复用 LarkClient 的缓存）
     const larkClient = LarkClient.fromAccount(account);
     // 3. 组装 ToolClient
     return new ToolClient({
         account,
-        senderOpenId: traceCtx?.senderOpenId,
+        senderOpenId: ticket?.senderOpenId,
         sdk: larkClient.sdk,
         config,
     });

@@ -7,8 +7,8 @@
  * Provides a function to forward an existing message to another chat
  * or user using the IM Message Forward API.
  */
-import { LarkClient } from "../../core/lark-client.js";
-import { normalizeFeishuTarget, resolveReceiveIdType, } from "../../core/targets.js";
+import { LarkClient } from '../../core/lark-client';
+import { normalizeFeishuTarget, resolveReceiveIdType } from '../../core/targets';
 // ---------------------------------------------------------------------------
 // forwardMessageFeishu
 // ---------------------------------------------------------------------------
@@ -34,6 +34,7 @@ export async function forwardMessageFeishu(params) {
             message_id: messageId,
         },
         params: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             receive_id_type: receiveIdType,
         },
         data: {
@@ -41,8 +42,8 @@ export async function forwardMessageFeishu(params) {
         },
     });
     return {
-        messageId: response?.data?.message_id ?? "",
-        chatId: response?.data?.chat_id ?? "",
+        messageId: response?.data?.message_id ?? '',
+        chatId: response?.data?.chat_id ?? '',
     };
 }
 //# sourceMappingURL=forward.js.map

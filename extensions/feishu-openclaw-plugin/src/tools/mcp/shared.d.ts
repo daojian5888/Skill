@@ -2,27 +2,27 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * MCP 工具的共享代码（所有业务域共享）
-  * 包含：MCP 客户端、类型定义、通用辅助函数
+ * MCP 工具的共享代码（所有业务域共享）
+ * 包含：MCP 客户端、类型定义、通用辅助函数
  */
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
-import type { TSchema } from "@sinclair/typebox";
-export type McpRpcSuccess = {
-    jsonrpc: "2.0";
+import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
+import type { TSchema } from '@sinclair/typebox';
+export interface McpRpcSuccess {
+    jsonrpc: '2.0';
     id: number | string;
     result: unknown;
-};
-export type McpRpcError = {
-    jsonrpc: "2.0";
+}
+export interface McpRpcError {
+    jsonrpc: '2.0';
     id: number | string | null;
     error: {
         code: number;
         message: string;
         data?: unknown;
     };
-};
+}
 export type McpRpcResponse = McpRpcSuccess | McpRpcError;
-import type { ToolActionKey } from "../../core/scope-manager.js";
+import type { ToolActionKey } from '../../core/scope-manager';
 export interface McpToolConfig<T = unknown> {
     name: string;
     mcpToolName: string;

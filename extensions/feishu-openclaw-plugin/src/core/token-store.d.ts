@@ -17,7 +17,7 @@
  *   Account  = "{appId}:{userOpenId}"
  *   Password = JSON-serialised StoredUAToken
  */
-export type StoredUAToken = {
+export interface StoredUAToken {
     userOpenId: string;
     appId: string;
     accessToken: string;
@@ -26,7 +26,7 @@ export type StoredUAToken = {
     refreshExpiresAt: number;
     scope: string;
     grantedAt: number;
-};
+}
 /** Mask a token for safe logging: only the last 4 chars are visible. */
 export declare function maskToken(token: string): string;
 /**
@@ -51,5 +51,5 @@ export declare function removeStoredToken(appId: string, userOpenId: string): Pr
  * - `"needs_refresh"` – access_token expired/expiring but refresh_token is valid
  * - `"expired"`       – both tokens are expired; re-authorization required
  */
-export declare function tokenStatus(token: StoredUAToken): "valid" | "needs_refresh" | "expired";
+export declare function tokenStatus(token: StoredUAToken): 'valid' | 'needs_refresh' | 'expired';
 //# sourceMappingURL=token-store.d.ts.map

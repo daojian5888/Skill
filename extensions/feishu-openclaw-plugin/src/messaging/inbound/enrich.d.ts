@@ -21,10 +21,10 @@
  * at parse time in {@link parseMessageEvent}. Quoted merge_forward
  * messages are still expanded here via {@link resolveQuotedContent}.
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { MessageContext, FeishuMediaInfo } from "../types.js";
-import type { LarkAccount } from "../../core/types.js";
-import type { PermissionError } from "./permission.js";
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { MessageContext, FeishuMediaInfo } from '../types';
+import type { LarkAccount } from '../../core/types';
+import type { PermissionError } from './permission';
 /**
  * Resolve the sender display name and track permission errors.
  *
@@ -50,10 +50,10 @@ export declare function prefetchUserNames(params: {
     log: (...args: unknown[]) => void;
 }): Promise<void>;
 /** Result of media resolution: envelope payload + per-file mapping. */
-export type ResolveMediaResult = {
+export interface ResolveMediaResult {
     payload: Record<string, unknown>;
     mediaList: FeishuMediaInfo[];
-};
+}
 /**
  * Download and save binary media attachments (images, files, audio,
  * video, stickers) from the inbound message.
@@ -67,7 +67,8 @@ export type ResolveMediaResult = {
  */
 export declare function resolveMedia(params: {
     ctx: MessageContext;
-    cfg: ClawdbotConfig;
+    /** account 级别的 ClawdbotConfig（channels.feishu 已替换为 per-account 合并后的配置） */
+    accountScopedCfg: ClawdbotConfig;
     account: LarkAccount;
     log: (...args: unknown[]) => void;
 }): Promise<ResolveMediaResult>;
@@ -94,7 +95,8 @@ export declare function substituteMediaPaths(content: string, mediaList: FeishuM
  */
 export declare function resolveQuotedContent(params: {
     ctx: MessageContext;
-    cfg: ClawdbotConfig;
+    /** account 级别的 ClawdbotConfig（channels.feishu 已替换为 per-account 合并后的配置） */
+    accountScopedCfg: ClawdbotConfig;
     account: LarkAccount;
     log: (...args: unknown[]) => void;
 }): Promise<string | undefined>;

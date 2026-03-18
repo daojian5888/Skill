@@ -2,7 +2,7 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * Shared utilities for content converters.
+ * Shared utilities for content converters.
  */
 /** Escape a string for safe use inside a RegExp. */
 export declare function escapeRegExp(str: string): string;
@@ -17,7 +17,7 @@ export declare function safeParse(raw: string): unknown | undefined;
  */
 export declare function formatDuration(ms: number): string;
 /**
- * Convert a millisecond timestamp string to "YYYY-MM-DD HH:mm" in UTC+8 (Beijing time).
+ * Convert a millisecond timestamp to "YYYY-MM-DD HH:mm" in UTC+8 (Beijing time).
  */
-export declare function millisToDatetime(ms: string): string;
+export declare function millisToDatetime(ms: string | number): string;
 //# sourceMappingURL=utils.d.ts.map

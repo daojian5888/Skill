@@ -7,7 +7,7 @@
  * Pure shape types for inbound message events, normalised message context,
  * mention targets, and media metadata.
  */
-export type FeishuMessageEvent = {
+export interface FeishuMessageEvent {
     sender: {
         sender_id: {
             open_id?: string;
@@ -25,7 +25,7 @@ export type FeishuMessageEvent = {
         update_time?: string;
         chat_id: string;
         thread_id?: string;
-        chat_type: "p2p" | "group";
+        chat_type: 'p2p' | 'group';
         message_type: string;
         content: string;
         mentions?: Array<{
@@ -40,11 +40,11 @@ export type FeishuMessageEvent = {
         }>;
         user_agent?: string;
     };
-};
-export type FeishuReactionCreatedEvent = {
+}
+export interface FeishuReactionCreatedEvent {
     message_id: string;
     chat_id?: string;
-    chat_type?: "p2p" | "group" | "private";
+    chat_type?: 'p2p' | 'group' | 'private';
     reaction_type?: {
         emoji_type?: string;
     };
@@ -55,8 +55,8 @@ export type FeishuReactionCreatedEvent = {
         union_id?: string;
     };
     action_time?: string;
-};
-export type FeishuBotAddedEvent = {
+}
+export interface FeishuBotAddedEvent {
     chat_id: string;
     operator_id: {
         open_id?: string;
@@ -71,10 +71,10 @@ export type FeishuBotAddedEvent = {
         en_us?: string;
         ja_jp?: string;
     };
-};
+}
 /** Metadata describing a media resource in a message (no binary data). */
-export type ResourceDescriptor = {
-    type: "image" | "file" | "audio" | "video" | "sticker";
+export interface ResourceDescriptor {
+    type: 'image' | 'file' | 'audio' | 'video' | 'sticker';
     /** image_key or file_key from the raw message content. */
     fileKey: string;
     /** Original file name (file/video messages). */
@@ -83,9 +83,9 @@ export type ResourceDescriptor = {
     duration?: number;
     /** Video cover image key. */
     coverImageKey?: string;
-};
+}
 /** Structured @mention information from a message. */
-export type MentionInfo = {
+export interface MentionInfo {
     /** Placeholder key in raw content (e.g. "@_user_1"). */
     key: string;
     /** Feishu Open ID of the mentioned user. */
@@ -94,9 +94,9 @@ export type MentionInfo = {
     name: string;
     /** Whether this mention targets the bot itself. */
     isBot: boolean;
-};
+}
 /** Raw message body, directly mapped from FeishuMessageEvent.message. */
-export type RawMessage = {
+export interface RawMessage {
     message_id: string;
     root_id?: string;
     parent_id?: string;
@@ -104,7 +104,7 @@ export type RawMessage = {
     update_time?: string;
     chat_id: string;
     thread_id?: string;
-    chat_type: "p2p" | "group";
+    chat_type: 'p2p' | 'group';
     message_type: string;
     content: string;
     mentions?: Array<{
@@ -118,9 +118,9 @@ export type RawMessage = {
         tenant_key?: string;
     }>;
     user_agent?: string;
-};
+}
 /** Raw sender data, directly mapped from FeishuMessageEvent.sender. */
-export type RawSender = {
+export interface RawSender {
     sender_id: {
         open_id?: string;
         user_id?: string;
@@ -128,14 +128,14 @@ export type RawSender = {
     };
     sender_type?: string;
     tenant_key?: string;
-};
+}
 /** Normalised representation of an inbound Feishu message. */
-export type MessageContext = {
+export interface MessageContext {
     chatId: string;
     messageId: string;
     senderId: string;
     senderName?: string;
-    chatType: "p2p" | "group";
+    chatType: 'p2p' | 'group';
     content: string;
     contentType: string;
     /** Media resource descriptors extracted during parsing. */
@@ -148,21 +148,21 @@ export type MessageContext = {
     createTime?: number;
     rawMessage: RawMessage;
     rawSender: RawSender;
-};
+}
 /** @deprecated Use {@link MessageContext} instead. */
 export type FeishuMessageContext = MessageContext;
 /** Metadata about a media attachment received in or sent through Feishu. */
-export type FeishuMediaInfo = {
+export interface FeishuMediaInfo {
     path: string;
     contentType?: string;
     placeholder: string;
     /** Original Feishu file_key / image_key that was downloaded. */
     fileKey: string;
     /** Resource type from the original descriptor. */
-    resourceType: ResourceDescriptor["type"];
-};
+    resourceType: ResourceDescriptor['type'];
+}
 /** Result of sending a message via the Feishu API. */
-export type FeishuSendResult = {
+export interface FeishuSendResult {
     messageId: string;
     chatId: string;
     /**
@@ -173,5 +173,5 @@ export type FeishuSendResult = {
      * delivery was not fully as intended and take corrective action.
      */
     warning?: string;
-};
+}
 //# sourceMappingURL=types.d.ts.map

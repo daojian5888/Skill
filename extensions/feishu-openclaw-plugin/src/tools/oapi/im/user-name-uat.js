@@ -2,16 +2,16 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * UAT 用户名解析模块
+ * UAT 用户名解析模块
  *
-  * 独立于 messaging/inbound 层的 TAT UserNameCache，
-  * 用于工具层以用户身份（UAT）批量解析用户显示名。
+ * 独立于 messaging/inbound 层的 TAT UserNameCache，
+ * 用于工具层以用户身份（UAT）批量解析用户显示名。
  *
-  * 设计动机：TAT 调用 contact/v3/users/batch 缺少权限导致返回的用户
-  * 条目不含 name 字段，而工具层搜索消息等场景运行在 UAT 上下文中，
-  * 用户 token 可以读取其他用户的名称。
+ * 设计动机：TAT 调用 contact/v3/users/batch 缺少权限导致返回的用户
+ * 条目不含 name 字段，而工具层搜索消息等场景运行在 UAT 上下文中，
+ * 用户 token 可以读取其他用户的名称。
  */
-import { isInvokeError } from "../helpers.js";
+import { isInvokeError } from '../helpers';
 // ---------------------------------------------------------------------------
 // 独立缓存：accountId → Map<openId, { name, expireAt }>
 // ---------------------------------------------------------------------------
@@ -93,15 +93,17 @@ export async function batchResolveUserNamesAsUser(params) {
     for (let i = 0; i < uniqueMissing.length; i += BATCH_SIZE) {
         const chunk = uniqueMissing.slice(i, i + BATCH_SIZE);
         try {
-            const res = await client.invoke("feishu_get_user.default", // 注：实际调用 batch API，共享 get_user 的 scope
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const res = await client.invoke('feishu_get_user.default', // 注：实际调用 batch API，共享 get_user 的 scope
             (sdk, opts) => sdk.contact.user.batch({
                 params: {
                     user_ids: chunk,
-                    user_id_type: "open_id",
+                    user_id_type: 'open_id',
                 },
             }, opts), {
-                as: "user",
+                as: 'user',
             });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const items = res?.data?.items ?? [];
             for (const item of items) {
                 const openId = item.open_id;

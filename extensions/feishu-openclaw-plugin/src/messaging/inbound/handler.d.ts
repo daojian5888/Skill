@@ -13,11 +13,9 @@
  *   6. Content resolution    → enrich.ts (media / quote, parallel)
  *   7. Agent dispatch        → dispatch.ts
  */
-import type { ClawdbotConfig, RuntimeEnv } from "openclaw/plugin-sdk";
-import { type HistoryEntry } from "openclaw/plugin-sdk";
-import type { FeishuMessageEvent } from "../types.js";
-/** @deprecated Use {@link parseMessageEvent} from `./parse.js` instead. */
-export { parseMessageEvent as parseFeishuMessageEvent } from "./parse.js";
+import type { ClawdbotConfig, RuntimeEnv } from 'openclaw/plugin-sdk';
+import { type HistoryEntry } from 'openclaw/plugin-sdk';
+import type { FeishuMessageEvent } from '../types';
 export declare function handleFeishuMessage(params: {
     cfg: ClawdbotConfig;
     event: FeishuMessageEvent;

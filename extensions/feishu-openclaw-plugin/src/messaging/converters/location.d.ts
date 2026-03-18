@@ -4,6 +4,6 @@
  *
  * Converter for "location" message type.
  */
-import type { ContentConverterFn } from "./types.js";
+import type { ContentConverterFn } from './types';
 export declare const convertLocation: ContentConverterFn;
 //# sourceMappingURL=location.d.ts.map

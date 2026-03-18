@@ -4,28 +4,30 @@
  *
  * Converter for "video" and "media" message types.
  */
-import { safeParse } from "./utils.js";
-import { formatDuration } from "./utils.js";
+import { safeParse } from './utils';
+import { formatDuration } from './utils';
 export const convertVideo = (raw) => {
     const parsed = safeParse(raw);
     const fileKey = parsed?.file_key;
     if (!fileKey) {
-        return { content: "[video]", resources: [] };
+        return { content: '[video]', resources: [] };
     }
-    const fileName = parsed?.file_name ?? "";
+    const fileName = parsed?.file_name ?? '';
     const duration = parsed?.duration;
     const coverKey = parsed?.image_key;
-    const nameAttr = fileName ? ` name="${fileName}"` : "";
-    const durationAttr = duration != null ? ` duration="${formatDuration(duration)}"` : "";
+    const nameAttr = fileName ? ` name="${fileName}"` : '';
+    const durationAttr = duration != null ? ` duration="${formatDuration(duration)}"` : '';
     return {
         content: `<video key="${fileKey}"${nameAttr}${durationAttr}/>`,
-        resources: [{
-                type: "video",
+        resources: [
+            {
+                type: 'video',
                 fileKey,
                 fileName: fileName || undefined,
                 duration: duration ?? undefined,
                 coverImageKey: coverKey ?? undefined,
-            }],
+            },
+        ],
     };
 };
 //# sourceMappingURL=video.js.map

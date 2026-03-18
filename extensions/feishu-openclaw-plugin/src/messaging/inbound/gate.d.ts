@@ -22,21 +22,21 @@
  *     - `"open"` → any sender; `"allowlist"` → check merged list;
  *       `"disabled"` → block all senders
  */
-import type { ClawdbotConfig, HistoryEntry } from "openclaw/plugin-sdk";
-import type { MessageContext } from "../types.js";
-import type { FeishuConfig } from "../../core/types.js";
-import type { LarkAccount } from "../../core/types.js";
+import type { ClawdbotConfig, HistoryEntry } from 'openclaw/plugin-sdk';
+import type { MessageContext } from '../types';
+import type { FeishuConfig } from '../../core/types';
+import type { LarkAccount } from '../../core/types';
 /**
  * Read the pairing allowFrom store for the Feishu channel via the SDK runtime.
  */
 declare function readAllowFromStore(accountId: string): Promise<string[]>;
-export type GateResult = {
+export interface GateResult {
     allowed: boolean;
     reason?: string;
     /** When a group message is rejected due to missing bot mention, the
      *  caller should record this entry into the chat history map. */
     historyEntry?: HistoryEntry;
-};
+}
 /**
  * Read the pairing allowFrom store for the Feishu channel.
  *
@@ -52,9 +52,10 @@ export { readAllowFromStore as readFeishuAllowFromStore };
  */
 export declare function checkMessageGate(params: {
     ctx: MessageContext;
-    feishuCfg?: FeishuConfig;
+    accountFeishuCfg?: FeishuConfig;
     account: LarkAccount;
-    cfg?: ClawdbotConfig;
+    /** account 级别的 ClawdbotConfig（channels.feishu 已替换为 per-account 合并后的配置） */
+    accountScopedCfg?: ClawdbotConfig;
     log: (...args: unknown[]) => void;
 }): Promise<GateResult>;
 //# sourceMappingURL=gate.d.ts.map

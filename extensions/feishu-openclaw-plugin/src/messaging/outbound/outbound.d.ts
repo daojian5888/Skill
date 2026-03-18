@@ -8,7 +8,7 @@
  * agent-generated replies back to Feishu chats. The adapter translates SDK
  * parameters and delegates to standalone sending functions.
  */
-import type { ChannelOutboundAdapter } from "openclaw/plugin-sdk";
+import type { ChannelOutboundAdapter } from 'openclaw/plugin-sdk';
 /**
  * Channel-specific payload for Feishu, carried in `ReplyPayload.channelData.feishu`.
  *

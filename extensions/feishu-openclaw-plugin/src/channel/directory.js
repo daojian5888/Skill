@@ -7,9 +7,22 @@
  * Provides both config-based (offline) and live API directory
  * lookups so the outbound subsystem and UI can resolve targets.
  */
-import { getLarkAccount } from "../core/accounts.js";
-import { LarkClient } from "../core/lark-client.js";
-import { normalizeFeishuTarget } from "../core/targets.js";
+import { getLarkAccount } from '../core/accounts';
+import { LarkClient } from '../core/lark-client';
+import { normalizeFeishuTarget } from '../core/targets';
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+/** Case-insensitive substring match on id and optional name. */
+function matchesQuery(id, name, query) {
+    if (!query)
+        return true;
+    return id.toLowerCase().includes(query) || (name?.toLowerCase().includes(query) ?? false);
+}
+/** Filter items and apply optional limit. */
+function applyLimitSlice(items, limit) {
+    return limit && limit > 0 ? items.slice(0, limit) : items;
+}
 // ---------------------------------------------------------------------------
 // Config-based (offline) directory
 // ---------------------------------------------------------------------------
@@ -22,12 +35,12 @@ import { normalizeFeishuTarget } from "../core/targets.js";
 export async function listFeishuDirectoryPeers(params) {
     const account = getLarkAccount(params.cfg, params.accountId);
     const feishuCfg = account.config;
-    const q = params.query?.trim().toLowerCase() || "";
+    const q = params.query?.trim().toLowerCase() || '';
     const ids = new Set();
     // Collect from allowFrom entries.
     for (const entry of feishuCfg?.allowFrom ?? []) {
         const trimmed = String(entry).trim();
-        if (trimmed && trimmed !== "*") {
+        if (trimmed && trimmed !== '*') {
             ids.add(trimmed);
         }
     }
@@ -38,13 +51,13 @@ export async function listFeishuDirectoryPeers(params) {
             ids.add(trimmed);
         }
     }
-    return Array.from(ids)
+    const peers = Array.from(ids)
         .map((raw) => raw.trim())
         .filter(Boolean)
         .map((raw) => normalizeFeishuTarget(raw) ?? raw)
-        .filter((id) => (q ? id.toLowerCase().includes(q) : true))
-        .slice(0, params.limit && params.limit > 0 ? params.limit : undefined)
-        .map((id) => ({ kind: "user", id }));
+        .filter((id) => matchesQuery(id, undefined, q))
+        .map((id) => ({ kind: 'user', id }));
+    return applyLimitSlice(peers, params.limit);
 }
 /**
  * List groups known from the channel config (groups + groupAllowFrom).
@@ -52,28 +65,28 @@ export async function listFeishuDirectoryPeers(params) {
 export async function listFeishuDirectoryGroups(params) {
     const account = getLarkAccount(params.cfg, params.accountId);
     const feishuCfg = account.config;
-    const q = params.query?.trim().toLowerCase() || "";
+    const q = params.query?.trim().toLowerCase() || '';
     const ids = new Set();
     // Collect from per-group config keys.
     for (const groupId of Object.keys(feishuCfg?.groups ?? {})) {
         const trimmed = groupId.trim();
-        if (trimmed && trimmed !== "*") {
+        if (trimmed && trimmed !== '*') {
             ids.add(trimmed);
         }
     }
     // Collect from groupAllowFrom entries.
     for (const entry of feishuCfg?.groupAllowFrom ?? []) {
         const trimmed = String(entry).trim();
-        if (trimmed && trimmed !== "*") {
+        if (trimmed && trimmed !== '*') {
             ids.add(trimmed);
         }
     }
-    return Array.from(ids)
+    const groups = Array.from(ids)
         .map((raw) => raw.trim())
         .filter(Boolean)
-        .filter((id) => (q ? id.toLowerCase().includes(q) : true))
-        .slice(0, params.limit && params.limit > 0 ? params.limit : undefined)
-        .map((id) => ({ kind: "group", id }));
+        .filter((id) => matchesQuery(id, undefined, q))
+        .map((id) => ({ kind: 'group', id }));
+    return applyLimitSlice(groups, params.limit);
 }
 // ---------------------------------------------------------------------------
 // Live API directory
@@ -93,29 +106,33 @@ export async function listFeishuDirectoryPeersLive(params) {
         const client = LarkClient.fromAccount(account).sdk;
         const peers = [];
         const limit = params.limit ?? 50;
-        const response = await client.contact.user.list({
-            params: {
-                page_size: Math.min(limit, 50),
-            },
-        });
-        if (response.code === 0 && response.data?.items) {
+        if (limit <= 0)
+            return [];
+        const q = params.query?.trim().toLowerCase() || '';
+        let pageToken;
+        do {
+            const remaining = limit - peers.length;
+            const response = await client.contact.user.list({
+                params: {
+                    page_size: Math.min(remaining, 50),
+                    page_token: pageToken,
+                },
+            });
+            if (response.code !== 0 || !response.data?.items)
+                break;
             for (const user of response.data.items) {
-                if (user.open_id) {
-                    const q = params.query?.trim().toLowerCase() || "";
-                    const name = user.name || "";
-                    if (!q || user.open_id.toLowerCase().includes(q) || name.toLowerCase().includes(q)) {
-                        peers.push({
-                            kind: "user",
-                            id: user.open_id,
-                            name: name || undefined,
-                        });
-                    }
+                if (user.open_id && matchesQuery(user.open_id, user.name, q)) {
+                    peers.push({
+                        kind: 'user',
+                        id: user.open_id,
+                        name: user.name || undefined,
+                    });
                 }
-                if (peers.length >= limit) {
+                if (peers.length >= limit)
                     break;
-                }
             }
-        }
+            pageToken = response.data?.page_token;
+        } while (pageToken && peers.length < limit);
         return peers;
     }
     catch {
@@ -138,29 +155,33 @@ export async function listFeishuDirectoryGroupsLive(params) {
         const client = LarkClient.fromAccount(account).sdk;
         const groups = [];
         const limit = params.limit ?? 50;
-        const response = await client.im.chat.list({
-            params: {
-                page_size: Math.min(limit, 100),
-            },
-        });
-        if (response.code === 0 && response.data?.items) {
+        if (limit <= 0)
+            return [];
+        const q = params.query?.trim().toLowerCase() || '';
+        let pageToken;
+        do {
+            const remaining = limit - groups.length;
+            const response = await client.im.chat.list({
+                params: {
+                    page_size: Math.min(remaining, 100),
+                    page_token: pageToken,
+                },
+            });
+            if (response.code !== 0 || !response.data?.items)
+                break;
             for (const chat of response.data.items) {
-                if (chat.chat_id) {
-                    const q = params.query?.trim().toLowerCase() || "";
-                    const name = chat.name || "";
-                    if (!q || chat.chat_id.toLowerCase().includes(q) || name.toLowerCase().includes(q)) {
-                        groups.push({
-                            kind: "group",
-                            id: chat.chat_id,
-                            name: name || undefined,
-                        });
-                    }
+                if (chat.chat_id && matchesQuery(chat.chat_id, chat.name, q)) {
+                    groups.push({
+                        kind: 'group',
+                        id: chat.chat_id,
+                        name: chat.name || undefined,
+                    });
                 }
-                if (groups.length >= limit) {
+                if (groups.length >= limit)
                     break;
-                }
             }
-        }
+            pageToken = response.data?.page_token;
+        } while (pageToken && groups.length < limit);
         return groups;
     }
     catch {

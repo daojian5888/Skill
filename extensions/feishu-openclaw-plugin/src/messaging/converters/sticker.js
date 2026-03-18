@@ -4,16 +4,16 @@
  *
  * Converter for "sticker" message type.
  */
-import { safeParse } from "./utils.js";
+import { safeParse } from './utils';
 export const convertSticker = (raw) => {
     const parsed = safeParse(raw);
     const fileKey = parsed?.file_key;
     if (!fileKey) {
-        return { content: "[sticker]", resources: [] };
+        return { content: '[sticker]', resources: [] };
     }
     return {
         content: `<sticker key="${fileKey}"/>`,
-        resources: [{ type: "sticker", fileKey }],
+        resources: [{ type: 'sticker', fileKey }],
     };
 };
 //# sourceMappingURL=sticker.js.map

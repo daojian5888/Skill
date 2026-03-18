@@ -4,27 +4,11 @@
  *
  * Message sending for the Feishu/Lark channel plugin.
  */
-import { LarkClient } from "../../core/lark-client.js";
-import { normalizeFeishuTarget, resolveReceiveIdType, } from "../../core/targets.js";
-import { optimizeMarkdownStyle } from "../../card/markdown-style.js";
-import { buildMentionedMessage, buildMentionedCardContent, } from "../inbound/mention.js";
-import { runWithMessageUnavailableGuard } from "../message-unavailable.js";
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-/**
- * 规范化 message_id，处理合成的 ID（如 "om_xxx:auth-complete"）
- * 提取真实的飞书 message_id 部分
- */
-function normalizeMessageId(messageId) {
-    if (!messageId)
-        return messageId;
-    // 如果包含冒号，说明是合成的 ID（如 "om_xxx:suffix"），提取真实部分
-    if (messageId.includes(':')) {
-        return messageId.split(':')[0];
-    }
-    return messageId;
-}
+import { LarkClient } from '../../core/lark-client';
+import { normalizeFeishuTarget, normalizeMessageId, resolveReceiveIdType } from '../../core/targets';
+import { runWithMessageUnavailableGuard } from '../../core/message-unavailable';
+import { optimizeMarkdownStyle } from '../../card/markdown-style';
+import { buildMentionedMessage, buildMentionedCardContent } from '../inbound/mention';
 // ---------------------------------------------------------------------------
 // sendMessageFeishu
 // ---------------------------------------------------------------------------
@@ -56,7 +40,7 @@ export async function sendMessageFeishu(params) {
     try {
         const runtime = LarkClient.runtime;
         if (runtime?.channel?.text?.convertMarkdownTables) {
-            messageText = runtime.channel.text.convertMarkdownTables(messageText, "bullets");
+            messageText = runtime.channel.text.convertMarkdownTables(messageText, 'bullets');
         }
     }
     catch {
@@ -67,7 +51,7 @@ export async function sendMessageFeishu(params) {
     // Build the post-format content envelope.
     const contentPayload = JSON.stringify({
         zh_cn: {
-            content: [[{ tag: "md", text: messageText }]],
+            content: [[{ tag: 'md', text: messageText }]],
         },
     });
     if (replyToMessageId) {
@@ -76,21 +60,21 @@ export async function sendMessageFeishu(params) {
         const normalizedId = normalizeMessageId(replyToMessageId);
         const response = await runWithMessageUnavailableGuard({
             messageId: normalizedId,
-            operation: "im.message.reply(post)",
+            operation: 'im.message.reply(post)',
             fn: () => client.im.message.reply({
                 path: {
                     message_id: normalizedId,
                 },
                 data: {
                     content: contentPayload,
-                    msg_type: "post",
+                    msg_type: 'post',
                     reply_in_thread: replyInThread,
                 },
             }),
         });
         return {
-            messageId: response?.data?.message_id ?? "",
-            chatId: response?.data?.chat_id ?? "",
+            messageId: response?.data?.message_id ?? '',
+            chatId: response?.data?.chat_id ?? '',
         };
     }
     // Send as a new message.
@@ -101,17 +85,18 @@ export async function sendMessageFeishu(params) {
     const receiveIdType = resolveReceiveIdType(target);
     const response = await client.im.message.create({
         params: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             receive_id_type: receiveIdType,
         },
         data: {
             receive_id: target,
-            msg_type: "post",
+            msg_type: 'post',
             content: contentPayload,
         },
     });
     return {
-        messageId: response?.data?.message_id ?? "",
-        chatId: response?.data?.chat_id ?? "",
+        messageId: response?.data?.message_id ?? '',
+        chatId: response?.data?.chat_id ?? '',
     };
 }
 // ---------------------------------------------------------------------------
@@ -132,21 +117,21 @@ export async function sendCardFeishu(params) {
         const normalizedId = normalizeMessageId(replyToMessageId);
         const response = await runWithMessageUnavailableGuard({
             messageId: normalizedId,
-            operation: "im.message.reply(interactive)",
+            operation: 'im.message.reply(interactive)',
             fn: () => client.im.message.reply({
                 path: {
                     message_id: normalizedId,
                 },
                 data: {
                     content: contentPayload,
-                    msg_type: "interactive",
+                    msg_type: 'interactive',
                     reply_in_thread: replyInThread,
                 },
             }),
         });
         return {
-            messageId: response?.data?.message_id ?? "",
-            chatId: response?.data?.chat_id ?? "",
+            messageId: response?.data?.message_id ?? '',
+            chatId: response?.data?.chat_id ?? '',
         };
     }
     const target = normalizeFeishuTarget(to);
@@ -156,17 +141,18 @@ export async function sendCardFeishu(params) {
     const receiveIdType = resolveReceiveIdType(target);
     const response = await client.im.message.create({
         params: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             receive_id_type: receiveIdType,
         },
         data: {
             receive_id: target,
-            msg_type: "interactive",
+            msg_type: 'interactive',
             content: contentPayload,
         },
     });
     return {
-        messageId: response?.data?.message_id ?? "",
-        chatId: response?.data?.chat_id ?? "",
+        messageId: response?.data?.message_id ?? '',
+        chatId: response?.data?.chat_id ?? '',
     };
 }
 // ---------------------------------------------------------------------------
@@ -189,7 +175,7 @@ export async function updateCardFeishu(params) {
     const client = LarkClient.fromCfg(cfg, accountId).sdk;
     await runWithMessageUnavailableGuard({
         messageId,
-        operation: "im.message.patch(interactive)",
+        operation: 'im.message.patch(interactive)',
         fn: () => client.im.message.patch({
             path: {
                 message_id: messageId,
@@ -216,14 +202,14 @@ export async function updateCardFeishu(params) {
 export function buildMarkdownCard(text) {
     const optimizedText = optimizeMarkdownStyle(text);
     return {
-        schema: "2.0",
+        schema: '2.0',
         config: {
             wide_screen_mode: true,
         },
         body: {
             elements: [
                 {
-                    tag: "markdown",
+                    tag: 'markdown',
                     content: optimizedText,
                 },
             ],
@@ -283,19 +269,19 @@ export async function editMessageFeishu(params) {
     const optimizedText = optimizeMarkdownStyle(text);
     const contentPayload = JSON.stringify({
         zh_cn: {
-            content: [[{ tag: "md", text: optimizedText }]],
+            content: [[{ tag: 'md', text: optimizedText }]],
         },
     });
     await runWithMessageUnavailableGuard({
         messageId,
-        operation: "im.message.update(post)",
+        operation: 'im.message.update(post)',
         fn: () => client.im.message.update({
             path: {
                 message_id: messageId,
             },
             data: {
                 content: contentPayload,
-                msg_type: "post",
+                msg_type: 'post',
             },
         }),
     });

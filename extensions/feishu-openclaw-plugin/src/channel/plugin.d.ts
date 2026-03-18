@@ -8,7 +8,7 @@
  * discover capabilities, resolve accounts, obtain outbound adapters, and
  * start the inbound event gateway.
  */
-import type { ChannelPlugin } from "openclaw/plugin-sdk";
-import type { LarkAccount } from "../core/types.js";
+import type { ChannelPlugin } from 'openclaw/plugin-sdk';
+import type { LarkAccount } from '../core/types';
 export declare const feishuPlugin: ChannelPlugin<LarkAccount>;
 //# sourceMappingURL=plugin.d.ts.map

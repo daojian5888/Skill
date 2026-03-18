@@ -7,17 +7,9 @@
  * Provides both config-based (offline) and live API directory
  * lookups so the outbound subsystem and UI can resolve targets.
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-export type FeishuDirectoryPeer = {
-    kind: "user";
-    id: string;
-    name?: string;
-};
-export type FeishuDirectoryGroup = {
-    kind: "group";
-    id: string;
-    name?: string;
-};
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { FeishuDirectoryPeer, FeishuDirectoryGroup } from './types';
+export type { FeishuDirectoryPeer, FeishuDirectoryGroup } from './types';
 /**
  * List users known from the channel config (allowFrom + dms fields).
  *

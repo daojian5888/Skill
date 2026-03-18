@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "self-improving-agent": {
+      "version": "3.0.1",
+      "installedAt": 1773418622862
+    },
+    "skill-creator": {
+      "version": "0.1.0",
+      "installedAt": 1773418801951
+    },
+    "find-skills": {
+      "version": "0.1.0",
+      "installedAt": 1773418862235
+    }
+  }
+}

@@ -2,19 +2,19 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * MCP 工具的共享代码（所有业务域共享）
-  * 包含：MCP 客户端、类型定义、通用辅助函数
+ * MCP 工具的共享代码（所有业务域共享）
+ * 包含：MCP 客户端、类型定义、通用辅助函数
  */
-import { createToolContext, formatToolResult } from "../helpers.js";
-import { handleInvokeErrorWithAutoAuth } from "../oapi/helpers.js";
-import { getUserAgent } from "../../core/version.js";
-import fs from "node:fs";
-import path from "node:path";
+import { createToolContext, formatToolResult } from '../helpers';
+import { handleInvokeErrorWithAutoAuth } from '../oapi/helpers';
+import { getUserAgent } from '../../core/version';
+import fs from 'node:fs';
+import path from 'node:path';
 // ---------------------------------------------------------------------------
 // 辅助函数
 // ---------------------------------------------------------------------------
 export function isRecord(v) {
-    return typeof v === "object" && v !== null;
+    return typeof v === 'object' && v !== null;
 }
 /**
  * 从配置对象中提取 MCP endpoint URL
@@ -30,8 +30,8 @@ export function extractMcpUrlFromConfig(cfg) {
         return undefined;
     const url = feishu.mcpEndpoint;
     const legacyUrl = feishu.mcp_url;
-    const chosen = typeof url === "string" ? url : typeof legacyUrl === "string" ? legacyUrl : undefined;
-    if (typeof chosen !== "string")
+    const chosen = typeof url === 'string' ? url : typeof legacyUrl === 'string' ? legacyUrl : undefined;
+    if (typeof chosen !== 'string')
         return undefined;
     const trimmed = chosen.trim();
     return trimmed ? trimmed : undefined;
@@ -43,17 +43,17 @@ export function extractMcpUrlFromConfig(cfg) {
 export function unwrapJsonRpcResult(v) {
     if (!isRecord(v))
         return v;
-    const hasJsonRpc = typeof v.jsonrpc === "string";
-    const hasId = "id" in v;
-    const hasResult = "result" in v;
-    const hasError = "error" in v;
+    const hasJsonRpc = typeof v.jsonrpc === 'string';
+    const hasId = 'id' in v;
+    const hasResult = 'result' in v;
+    const hasError = 'error' in v;
     if (hasJsonRpc && (hasResult || hasError)) {
         if (hasError) {
             const err = v.error;
-            if (isRecord(err) && typeof err.message === "string") {
+            if (isRecord(err) && typeof err.message === 'string') {
                 throw new Error(err.message);
             }
-            throw new Error("MCP 返回 error，但无法解析 message");
+            throw new Error('MCP 返回 error，但无法解析 message');
         }
         return unwrapJsonRpcResult(v.result);
     }
@@ -74,10 +74,10 @@ function readMcpUrlFromOpenclawJson() {
     // 优先读取工作目录下的 `.openclaw/openclaw.json`
     // 约定：channels.feishu.mcpEndpoint（兼容旧字段 mcp_url）
     try {
-        const p = path.join(process.cwd(), ".openclaw", "openclaw.json");
+        const p = path.join(process.cwd(), '.openclaw', 'openclaw.json');
         if (!fs.existsSync(p))
             return undefined;
-        const raw = fs.readFileSync(p, "utf8");
+        const raw = fs.readFileSync(p, 'utf8');
         const cfg = JSON.parse(raw);
         return extractMcpUrlFromConfig(cfg);
     }
@@ -91,15 +91,14 @@ function getMcpEndpoint() {
     return (mcpEndpointOverride ||
         readMcpUrlFromOpenclawJson() ||
         process.env.FEISHU_MCP_ENDPOINT?.trim() ||
-        "https://mcp.feishu.cn/mcp");
+        'https://mcp.feishu.cn/mcp');
 }
 function buildAuthHeader() {
     // 允许通过环境变量注入鉴权（若服务端要求）
-    const token = process.env.FEISHU_MCP_BEARER_TOKEN?.trim() ||
-        process.env.FEISHU_MCP_TOKEN?.trim();
+    const token = process.env.FEISHU_MCP_BEARER_TOKEN?.trim() || process.env.FEISHU_MCP_TOKEN?.trim();
     if (!token)
         return undefined;
-    return token.toLowerCase().startsWith("bearer ") ? token : `Bearer ${token}`;
+    return token.toLowerCase().startsWith('bearer ') ? token : `Bearer ${token}`;
 }
 // ---------------------------------------------------------------------------
 // MCP JSON-RPC 客户端
@@ -115,24 +114,24 @@ export async function callMcpTool(name, args, toolCallId, uat) {
     const endpoint = getMcpEndpoint();
     const auth = buildAuthHeader();
     const body = {
-        jsonrpc: "2.0",
+        jsonrpc: '2.0',
         id: toolCallId,
-        method: "tools/call",
+        method: 'tools/call',
         params: {
             name,
             arguments: args,
         },
     };
     const headers = {
-        "Content-Type": "application/json",
-        "X-Lark-MCP-UAT": uat,
-        "X-Lark-MCP-Allowed-Tools": name,
-        "User-Agent": getUserAgent(),
+        'Content-Type': 'application/json',
+        'X-Lark-MCP-UAT': uat,
+        'X-Lark-MCP-Allowed-Tools': name,
+        'User-Agent': getUserAgent(),
     };
     if (auth)
         headers.authorization = auth;
     const res = await fetch(endpoint, {
-        method: "POST",
+        method: 'POST',
         headers,
         body: JSON.stringify(body),
     });
@@ -147,11 +146,14 @@ export async function callMcpTool(name, args, toolCallId, uat) {
     catch {
         throw new Error(`MCP 返回非 JSON：${text.slice(0, 4000)}`);
     }
-    if ("error" in data) {
+    if ('error' in data) {
         throw new Error(`MCP error ${data.error.code}: ${data.error.message}`);
     }
     return unwrapJsonRpcResult(data.result);
 }
+// ---------------------------------------------------------------------------
+// Scope 管理
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // 通用工具注册函数
 // ---------------------------------------------------------------------------
@@ -178,20 +180,22 @@ export function registerMcpTool(api, config) {
                 const result = await client.invoke(config.toolActionKey, async (_sdk, _opts, uat) => {
                     // 权限检查已通过，直接使用 invoke 传入的 UAT
                     if (!uat) {
-                        throw new Error("UAT not available");
+                        throw new Error('UAT not available');
                     }
                     return callMcpTool(config.mcpToolName, p, toolCallId, uat);
                 }, {
-                    as: "user",
+                    as: 'user',
                 });
                 const duration = Date.now() - startTime;
                 log.debug?.(`${config.mcpToolName} succeeded in ${duration}ms`);
                 // MCP tools/call 返回值已经是 { content: [{ type, text }] } 格式，
                 // 直接透传 content，避免被 formatToolResult 再包一层
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 if (isRecord(result) && Array.isArray(result.content)) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const mcpContent = result.content;
                     let details = result;
-                    if (mcpContent.length === 1 && mcpContent[0]?.type === "text") {
+                    if (mcpContent.length === 1 && mcpContent[0]?.type === 'text') {
                         try {
                             details = JSON.parse(mcpContent[0].text);
                         }
@@ -201,7 +205,7 @@ export function registerMcpTool(api, config) {
                     }
                     return {
                         content: mcpContent.map((c) => ({
-                            type: "text",
+                            type: 'text',
                             text: c.text,
                         })),
                         details,

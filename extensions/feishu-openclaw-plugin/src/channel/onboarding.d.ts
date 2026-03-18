@@ -8,6 +8,6 @@
  * setup` wizard can configure Feishu credentials, domain, group
  * policies, and DM allowlists interactively.
  */
-import type { ChannelOnboardingAdapter } from "openclaw/plugin-sdk";
+import type { ChannelOnboardingAdapter } from 'openclaw/plugin-sdk';
 export declare const feishuOnboardingAdapter: ChannelOnboardingAdapter;
 //# sourceMappingURL=onboarding.d.ts.map

@@ -8,50 +8,50 @@
  * Feishu messages, uploading media to the Feishu IM storage, and
  * sending image / file messages to chats.
  */
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { OpenClawConfig } from 'openclaw/plugin-sdk';
 /**
  * Result of downloading an image from Feishu.
  */
-export type DownloadImageResult = {
+export interface DownloadImageResult {
     /** The raw image bytes. */
     buffer: Buffer;
     /** The MIME type of the image (e.g. "image/png"), if known. */
     contentType?: string;
-};
+}
 /**
  * Result of downloading a message resource (image or file) from Feishu.
  */
-export type DownloadMessageResourceResult = {
+export interface DownloadMessageResourceResult {
     /** The raw file bytes. */
     buffer: Buffer;
     /** The MIME type of the resource, if known. */
     contentType?: string;
     /** The original file name, if available. */
     fileName?: string;
-};
+}
 /**
  * Result of uploading an image to Feishu.
  */
-export type UploadImageResult = {
+export interface UploadImageResult {
     /** The image_key assigned by Feishu, used to reference the image. */
     imageKey: string;
-};
+}
 /**
  * Result of uploading a file to Feishu.
  */
-export type UploadFileResult = {
+export interface UploadFileResult {
     /** The file_key assigned by Feishu, used to reference the file. */
     fileKey: string;
-};
+}
 /**
  * Result of sending a media (image or file) message.
  */
-export type SendMediaResult = {
+export interface SendMediaResult {
     /** Platform-assigned message ID. */
     messageId: string;
     /** Chat ID where the media was sent. */
     chatId: string;
-};
+}
 /**
  * Download a resource (image or file) attached to a specific message.
  *
@@ -66,7 +66,7 @@ export declare function downloadMessageResourceFeishu(params: {
     cfg: OpenClawConfig;
     messageId: string;
     fileKey: string;
-    type: "image" | "file";
+    type: 'image' | 'file';
     accountId?: string;
 }): Promise<DownloadMessageResourceResult>;
 /**
@@ -84,7 +84,7 @@ export declare function downloadMessageResourceFeishu(params: {
 export declare function uploadImageLark(params: {
     cfg: OpenClawConfig;
     image: Buffer | string;
-    imageType?: "message" | "avatar";
+    imageType?: 'message' | 'avatar';
     accountId?: string;
 }): Promise<UploadImageResult>;
 /**
@@ -102,7 +102,7 @@ export declare function uploadFileLark(params: {
     cfg: OpenClawConfig;
     file: Buffer | string;
     fileName: string;
-    fileType: "opus" | "mp4" | "pdf" | "doc" | "xls" | "ppt" | "stream";
+    fileType: 'opus' | 'mp4' | 'pdf' | 'doc' | 'xls' | 'ppt' | 'stream';
     duration?: number;
     accountId?: string;
 }): Promise<UploadFileResult>;
@@ -197,7 +197,7 @@ export declare function sendAudioLark(params: {
  * @param fileName - The file name (with extension).
  * @returns The detected file type.
  */
-export declare function detectFileType(fileName: string): "opus" | "mp4" | "pdf" | "doc" | "xls" | "ppt" | "stream";
+export declare function detectFileType(fileName: string): 'opus' | 'mp4' | 'pdf' | 'doc' | 'xls' | 'ppt' | 'stream';
 /**
  * Parse the duration (in milliseconds) from an OGG/Opus audio buffer.
  *

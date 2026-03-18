@@ -12,28 +12,31 @@
  *   - `LarkClient.fromAccount(account)` — from a pre-resolved account
  *   - `LarkClient.fromCredentials(credentials)` — ephemeral instance (not cached)
  */
-import * as Lark from "@larksuiteoapi/node-sdk";
-import { getLarkAccount } from "./accounts.js";
-import { clearUserNameCache } from "../messaging/inbound/user-name-cache.js";
-import { clearChatInfoCache } from "./chat-info-cache.js";
-import { getUserAgent } from "./version.js";
-import { trace } from "./trace.js";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as Lark from '@larksuiteoapi/node-sdk';
+import { getLarkAccount } from './accounts';
+import { clearUserNameCache } from '../messaging/inbound/user-name-cache';
+import { clearChatInfoCache } from './chat-info-cache';
+import { getUserAgent } from './version';
+import { larkLogger } from './lark-logger';
+const log = larkLogger('core/lark-client');
 // ---------------------------------------------------------------------------
 // 注入 User-Agent 到所有飞书 SDK 请求
 // ---------------------------------------------------------------------------
-const GLOBAL_LARK_USER_AGENT_KEY = "LARK_USER_AGENT";
+const GLOBAL_LARK_USER_AGENT_KEY = 'LARK_USER_AGENT';
 function installGlobalUserAgent() {
     // node-sdk 内置拦截器最终会读取 global.LARK_USER_AGENT 并覆盖 User-Agent
-    globalThis[GLOBAL_LARK_USER_AGENT_KEY] =
-        getUserAgent();
+    globalThis[GLOBAL_LARK_USER_AGENT_KEY] = getUserAgent();
 }
 installGlobalUserAgent();
+Lark.defaultHttpInstance.interceptors.request.handlers = [];
 // 使用 interceptors 在所有 HTTP 请求中注入 User-Agent header
-Lark.defaultHttpInstance.interceptors.request.use((config) => {
-    config.headers = config.headers || {};
-    config.headers["User-Agent"] = getUserAgent();
-    return config;
-});
+Lark.defaultHttpInstance.interceptors.request.use((req) => {
+    if (req.headers) {
+        req.headers['User-Agent'] = getUserAgent();
+    }
+    return req;
+}, undefined, { synchronous: true });
 // ---------------------------------------------------------------------------
 // Brand → SDK domain
 // ---------------------------------------------------------------------------
@@ -43,31 +46,7 @@ const BRAND_TO_DOMAIN = {
 };
 /** Map a `LarkBrand` to the SDK `domain` parameter. */
 function resolveBrand(brand) {
-    return BRAND_TO_DOMAIN[brand ?? "feishu"] ?? brand.replace(/\/+$/, "");
-}
-// ---------------------------------------------------------------------------
-// HTTP header injection
-// ---------------------------------------------------------------------------
-/**
- * Wrap the SDK's `defaultHttpInstance` to inject custom headers into every
- * outgoing request.
- *
- * The SDK routes all API calls through `httpInstance.request()`, so we only
- * need to override that single method.
- */
-function createHttpInstanceWithHeaders(headers) {
-    const base = Lark.defaultHttpInstance;
-    const wrapper = Object.create(base);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- axios opts
-    wrapper.request = ((opts) => base.request({
-        ...opts,
-        headers: {
-            ...opts?.headers,
-            ...headers,
-            "User-Agent": getUserAgent(), // 确保 User-Agent 被注入（放在最后，避免被 headers 覆盖）
-        },
-    }));
-    return wrapper;
+    return BRAND_TO_DOMAIN[brand ?? 'feishu'] ?? brand.replace(/\/+$/, '');
 }
 // ---------------------------------------------------------------------------
 // LarkClient
@@ -80,6 +59,8 @@ export class LarkClient {
     _wsClient = null;
     _botOpenId;
     _botName;
+    _lastProbeResult = null;
+    _lastProbeAt = 0;
     /** Attached message deduplicator — disposed together with the client. */
     messageDedup = null;
     // ---- Plugin runtime (singleton) ------------------------------------------
@@ -91,10 +72,25 @@ export class LarkClient {
     /** Retrieve the stored runtime instance. Throws if not yet initialised. */
     static get runtime() {
         if (!LarkClient._runtime) {
-            throw new Error("Feishu plugin runtime has not been initialised. " +
-                "Ensure LarkClient.setRuntime() is called during plugin activation.");
+            throw new Error('Feishu plugin runtime has not been initialised. ' +
+                'Ensure LarkClient.setRuntime() is called during plugin activation.');
         }
         return LarkClient._runtime;
+    }
+    // ---- Global config (singleton) -------------------------------------------
+    //
+    // Plugin commands receive an account-scoped config (channels.feishu replaced
+    // with the merged per-account config, `accounts` map stripped).  Commands
+    // that need cross-account visibility (e.g. doctor, diagnose) read the
+    // original global config from here.
+    static _globalConfig = null;
+    /** Store the original global config (called during monitor startup). */
+    static setGlobalConfig(cfg) {
+        LarkClient._globalConfig = cfg;
+    }
+    /** Retrieve the stored global config, or `null` if not yet set. */
+    static get globalConfig() {
+        return LarkClient._globalConfig;
     }
     // --------------------------------------------------------------------------
     constructor(account) {
@@ -115,14 +111,12 @@ export class LarkClient {
      */
     static fromAccount(account) {
         const existing = cache.get(account.accountId);
-        if (existing &&
-            existing.account.appId === account.appId &&
-            existing.account.appSecret === account.appSecret) {
+        if (existing && existing.account.appId === account.appId && existing.account.appSecret === account.appSecret) {
             return existing;
         }
         // Credentials changed — tear down the stale instance before replacing it.
         if (existing) {
-            trace.info(`LarkClient[${account.accountId}]: credentials changed, disposing stale instance`);
+            log.info(`credentials changed, disposing stale instance`, { accountId: account.accountId });
             existing.dispose();
         }
         const instance = new LarkClient(account);
@@ -136,9 +130,9 @@ export class LarkClient {
      */
     static fromCredentials(credentials) {
         const base = {
-            accountId: credentials.accountId ?? "default",
+            accountId: credentials.accountId ?? 'default',
             enabled: true,
-            brand: credentials.brand ?? "feishu",
+            brand: credentials.brand ?? 'feishu',
             config: {},
         };
         const account = credentials.appId && credentials.appSecret
@@ -173,18 +167,12 @@ export class LarkClient {
     get sdk() {
         if (!this._sdk) {
             const { appId, appSecret } = this.requireCredentials();
-            const httpHeaders = this.account.extra?.httpHeaders;
-            const clientOpts = {
+            this._sdk = new Lark.Client({
                 appId,
                 appSecret,
                 appType: Lark.AppType.SelfBuild,
                 domain: resolveBrand(this.account.brand),
-            };
-            // 如果有额外的 HTTP headers（如 x-tt-env），仍然需要包装 httpInstance
-            if (httpHeaders && Object.keys(httpHeaders).length > 0) {
-                clientOpts.httpInstance = createHttpInstanceWithHeaders(httpHeaders);
-            }
-            this._sdk = new Lark.Client(clientOpts);
+            });
         }
         return this._sdk;
     }
@@ -194,40 +182,52 @@ export class LarkClient {
      * Results are cached on the instance for subsequent access via
      * `botOpenId` / `botName`.
      */
-    async probe() {
+    async probe(opts) {
+        const maxAge = opts?.maxAgeMs ?? 0;
+        if (maxAge > 0 && this._lastProbeResult && Date.now() - this._lastProbeAt < maxAge) {
+            return this._lastProbeResult;
+        }
         if (!this.account.appId || !this.account.appSecret) {
-            return { ok: false, error: "missing credentials (appId, appSecret)" };
+            return { ok: false, error: 'missing credentials (appId, appSecret)' };
         }
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const res = await this.sdk.request({
-                method: "GET",
-                url: "/open-apis/bot/v3/info",
+                method: 'GET',
+                url: '/open-apis/bot/v3/info',
                 data: {},
             });
             if (res.code !== 0) {
-                return {
+                const result = {
                     ok: false,
                     appId: this.account.appId,
                     error: `API error: ${res.msg || `code ${res.code}`}`,
                 };
+                this._lastProbeResult = result;
+                this._lastProbeAt = Date.now();
+                return result;
             }
             const bot = res.bot || res.data?.bot;
             this._botOpenId = bot?.open_id;
             this._botName = bot?.bot_name;
-            return {
+            const result = {
                 ok: true,
                 appId: this.account.appId,
                 botName: this._botName,
                 botOpenId: this._botOpenId,
             };
+            this._lastProbeResult = result;
+            this._lastProbeAt = Date.now();
+            return result;
         }
         catch (err) {
-            return {
+            const result = {
                 ok: false,
                 appId: this.account.appId,
                 error: err instanceof Error ? err.message : String(err),
             };
+            this._lastProbeResult = result;
+            this._lastProbeAt = Date.now();
+            return result;
         }
     }
     /** Cached bot open_id (available after `probe()` or `startWS()`). */
@@ -250,16 +250,15 @@ export class LarkClient {
         if (autoProbe)
             await this.probe();
         const dispatcher = new Lark.EventDispatcher({
-            encryptKey: this.account.encryptKey ?? "",
-            verificationToken: this.account.verificationToken ?? "",
+            encryptKey: this.account.encryptKey ?? '',
+            verificationToken: this.account.verificationToken ?? '',
         });
         dispatcher.register(handlers);
         const { appId, appSecret } = this.requireCredentials();
-        const httpHeaders = this.account.extra?.httpHeaders;
         // Close any existing WSClient before creating a new one to prevent
         // orphaned connections when startWS is called multiple times.
         if (this._wsClient) {
-            trace.warn(`LarkClient[${this.accountId}]: closing previous WSClient before reconnect`);
+            log.warn(`closing previous WSClient before reconnect`, { accountId: this.accountId });
             try {
                 this._wsClient.close({ force: true });
             }
@@ -268,27 +267,22 @@ export class LarkClient {
             }
             this._wsClient = null;
         }
-        const wsOpts = {
+        this._wsClient = new Lark.WSClient({
             appId,
             appSecret,
             domain: resolveBrand(this.account.brand),
             loggerLevel: Lark.LoggerLevel.info,
-        };
-        // 如果有额外的 HTTP headers（如 x-tt-env），仍然需要包装 httpInstance
-        if (httpHeaders && Object.keys(httpHeaders).length > 0) {
-            wsOpts.httpInstance = createHttpInstanceWithHeaders(httpHeaders);
-        }
-        this._wsClient = new Lark.WSClient(wsOpts);
+        });
         // SDK 的 handleEventData 只处理 type="event"，card action 回调是 type="card" 会被丢弃。
         // 打 patch 将 "card" 类型消息改成 "event" 后交给原 handler，让 EventDispatcher 正常路由。
         const wsClientAny = this._wsClient;
         const origHandleEventData = wsClientAny.handleEventData.bind(wsClientAny);
         wsClientAny.handleEventData = (data) => {
-            const msgType = data.headers?.find?.((h) => h.key === "type")?.value;
-            if (msgType === "card") {
+            const msgType = data.headers?.find?.((h) => h.key === 'type')?.value;
+            if (msgType === 'card') {
                 const patchedData = {
                     ...data,
-                    headers: data.headers.map((h) => h.key === "type" ? { ...h, value: "event" } : h),
+                    headers: data.headers.map((h) => (h.key === 'type' ? { ...h, value: 'event' } : h)),
                 };
                 return origHandleEventData(patchedData);
             }
@@ -303,7 +297,7 @@ export class LarkClient {
     /** Disconnect WebSocket but keep instance in cache. */
     disconnect() {
         if (this._wsClient) {
-            trace.info(`LarkClient[${this.accountId}]: disconnecting WebSocket`);
+            log.info(`disconnecting WebSocket`, { accountId: this.accountId });
             try {
                 this._wsClient.close({ force: true });
             }
@@ -313,7 +307,7 @@ export class LarkClient {
         }
         this._wsClient = null;
         if (this.messageDedup) {
-            trace.info(`LarkClient[${this.accountId}]: disposing message dedup (size=${this.messageDedup.size})`);
+            log.info(`disposing message dedup`, { accountId: this.accountId, size: this.messageDedup.size });
             this.messageDedup.dispose();
             this.messageDedup = null;
         }
@@ -343,7 +337,7 @@ export class LarkClient {
                 this.disconnect();
                 return resolve();
             }
-            signal?.addEventListener("abort", () => {
+            signal?.addEventListener('abort', () => {
                 this.disconnect();
                 resolve();
             }, { once: true });

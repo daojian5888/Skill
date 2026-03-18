@@ -5,8 +5,9 @@
  * Access control policies for the Feishu/Lark channel plugin.
  *
  * Provides allowlist matching, group configuration lookup, tool policy
- * extraction, group access checks, and reply policy resolution.
+ * extraction, and group access checks.
  */
+import { getLarkAccount } from '../../core/accounts';
 /**
  * Check whether a sender is permitted by a given allowlist.
  *
@@ -15,26 +16,24 @@
  * When the allowlist is empty the result is `{ allowed: false }`.
  */
 export function resolveFeishuAllowlistMatch(params) {
-    const allowFrom = params.allowFrom
-        .map((entry) => String(entry).trim().toLowerCase())
-        .filter(Boolean);
+    const allowFrom = params.allowFrom.map((entry) => String(entry).trim().toLowerCase()).filter(Boolean);
     if (allowFrom.length === 0) {
         return { allowed: false };
     }
     // Wildcard: allow everyone
-    if (allowFrom.includes("*")) {
-        return { allowed: true, matchKey: "*", matchSource: "wildcard" };
+    if (allowFrom.includes('*')) {
+        return { allowed: true, matchKey: '*', matchSource: 'wildcard' };
     }
     // Match by sender ID
     const senderId = params.senderId.toLowerCase();
     if (allowFrom.includes(senderId)) {
-        return { allowed: true, matchKey: senderId, matchSource: "id" };
+        return { allowed: true, matchKey: senderId, matchSource: 'id' };
     }
-    // Match by sender display name
-    const senderName = params.senderName?.toLowerCase();
-    if (senderName && allowFrom.includes(senderName)) {
-        return { allowed: true, matchKey: senderName, matchSource: "name" };
-    }
+    /*  // Match by sender display name
+      const senderName = params.senderName?.toLowerCase();
+      if (senderName && allowFrom.includes(senderName)) {
+        return { allowed: true, matchKey: senderName, matchSource: 'name' };
+      }*/
     return { allowed: false };
 }
 // ---------------------------------------------------------------------------
@@ -68,14 +67,22 @@ export function resolveFeishuGroupConfig(params) {
 /**
  * Extract the tool policy configuration from the group config that
  * corresponds to the given group context.
+ *
+ * ★ 多账号配置隔离：SDK 回调传入的 params.cfg 是顶层全局配置，
+ *   cfg.channels.feishu 不包含 per-account 的覆盖值。
+ *   这里通过 getLarkAccount() 获取当前 account 合并后的配置，
+ *   确保每个账号的 groups / tool policy 配置独立生效。
  */
 export function resolveFeishuGroupToolPolicy(params) {
-    const cfg = params.cfg.channels?.feishu;
-    if (!cfg) {
+    // 使用 getLarkAccount 获取 per-account 合并后的飞书渠道配置，
+    // 而非直接读取 cfg.channels.feishu（顶层全局配置）。
+    const account = getLarkAccount(params.cfg, params.accountId ?? undefined);
+    const accountFeishuCfg = account.config;
+    if (!accountFeishuCfg) {
         return undefined;
     }
     const groupConfig = resolveFeishuGroupConfig({
-        cfg,
+        cfg: accountFeishuCfg,
         groupId: params.groupId,
     });
     return groupConfig?.tools;
@@ -92,31 +99,63 @@ export function resolveFeishuGroupToolPolicy(params) {
  */
 export function isFeishuGroupAllowed(params) {
     const { groupPolicy } = params;
-    if (groupPolicy === "disabled") {
+    if (groupPolicy === 'disabled') {
         return false;
     }
-    if (groupPolicy === "open") {
+    if (groupPolicy === 'open') {
         return true;
     }
     // allowlist
     return resolveFeishuAllowlistMatch(params).allowed;
 }
 // ---------------------------------------------------------------------------
-// Reply policy (mention requirement)
+// Legacy compat: groupAllowFrom splitting
 // ---------------------------------------------------------------------------
 /**
- * Resolve whether the bot requires an explicit @-mention to respond.
+ * Split a raw `groupAllowFrom` array into legacy chat-ID entries
+ * (`oc_xxx`) and sender-level entries.
  *
- * DMs never require a mention.  For groups the precedence is:
- *   groupConfig.requireMention > globalConfig.requireMention > true (default)
+ * Older Feishu configs used `groupAllowFrom` with `oc_xxx` chat IDs to
+ * control which groups are allowed.  The correct semantic (aligned with
+ * Telegram) is sender IDs.  This function separates the two concerns so
+ * both layers can work independently.
  */
-export function resolveFeishuReplyPolicy(params) {
-    if (params.isDirectMessage) {
-        return { requireMention: false };
+export function splitLegacyGroupAllowFrom(rawGroupAllowFrom) {
+    const legacyChatIds = [];
+    const senderAllowFrom = [];
+    for (const entry of rawGroupAllowFrom) {
+        const str = String(entry);
+        if (str.startsWith('oc_')) {
+            legacyChatIds.push(str);
+        }
+        else {
+            senderAllowFrom.push(str);
+        }
     }
-    const requireMention = params.groupConfig?.requireMention ??
-        params.globalConfig?.requireMention ??
-        true;
-    return { requireMention };
+    return { legacyChatIds, senderAllowFrom };
+}
+// ---------------------------------------------------------------------------
+// Sender policy context resolution
+// ---------------------------------------------------------------------------
+/**
+ * Resolve the effective sender-level group policy and the merged
+ * `allowFrom` list for sender filtering within a group.
+ *
+ * The precedence chain for `senderPolicy` is:
+ *   per-group `groupPolicy` > default ("*") group `groupPolicy` >
+ *   global `groupPolicy` > "open" (default).
+ *
+ * The `senderAllowFrom` is the union of global (non-oc_) entries,
+ * per-group entries, and default ("*") entries (when no per-group config).
+ */
+export function resolveGroupSenderPolicyContext(params) {
+    const { groupConfig, defaultConfig, accountFeishuCfg, senderGroupAllowFrom } = params;
+    const senderPolicy = groupConfig?.groupPolicy ?? defaultConfig?.groupPolicy ?? accountFeishuCfg?.groupPolicy ?? 'open';
+    const senderAllowFrom = [
+        ...senderGroupAllowFrom,
+        ...(groupConfig?.allowFrom ?? []),
+        ...(!groupConfig && defaultConfig?.allowFrom ? defaultConfig.allowFrom : []),
+    ];
+    return { senderPolicy, senderAllowFrom };
 }
 //# sourceMappingURL=policy.js.map

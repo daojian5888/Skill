@@ -2,11 +2,11 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * Shared utilities for content converters.
+ * Shared utilities for content converters.
  */
 /** Escape a string for safe use inside a RegExp. */
 export function escapeRegExp(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 /**
  * Safely parse a JSON string, returning undefined on failure.
@@ -33,20 +33,20 @@ export function formatDuration(ms) {
     return `${seconds.toFixed(1)}s`;
 }
 /**
- * Convert a millisecond timestamp string to "YYYY-MM-DD HH:mm" in UTC+8 (Beijing time).
+ * Convert a millisecond timestamp to "YYYY-MM-DD HH:mm" in UTC+8 (Beijing time).
  */
 export function millisToDatetime(ms) {
     const num = Number(ms);
     if (!Number.isFinite(num))
-        return ms;
+        return String(ms);
     // UTC+8 offset in milliseconds
     const utc8Offset = 8 * 60 * 60 * 1000;
     const d = new Date(num + utc8Offset);
     const year = d.getUTCFullYear();
-    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(d.getUTCDate()).padStart(2, "0");
-    const hour = String(d.getUTCHours()).padStart(2, "0");
-    const minute = String(d.getUTCMinutes()).padStart(2, "0");
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const hour = String(d.getUTCHours()).padStart(2, '0');
+    const minute = String(d.getUTCMinutes()).padStart(2, '0');
     return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 //# sourceMappingURL=utils.js.map

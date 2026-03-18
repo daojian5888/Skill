@@ -11,19 +11,21 @@
  * This module is a general-purpose message parsing utility — usable
  * from inbound handling, outbound formatting, and skills.
  */
-import { converters } from "./index.js";
-import { escapeRegExp } from "./utils.js";
-import { getUserNameCache } from "../inbound/user-name-cache.js";
+import { converters } from './index';
+import { escapeRegExp } from './utils';
+import { getUserNameCache } from '../inbound/user-name-cache';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 /** 从 mention 的 id 字段提取 open_id（兼容事件推送的对象格式和 API 响应的字符串格式） */
 export function extractMentionOpenId(id) {
-    if (typeof id === "string")
+    if (typeof id === 'string')
         return id;
-    if (id && typeof id === "object" && "open_id" in id)
-        return id.open_id ?? "";
-    return "";
+    if (id != null && typeof id === 'object' && 'open_id' in id) {
+        const openId = id.open_id;
+        return typeof openId === 'string' ? openId : '';
+    }
+    return '';
 }
 // ---------------------------------------------------------------------------
 // Convert
@@ -36,7 +38,7 @@ export function extractMentionOpenId(id) {
  * async operations. Synchronous converters are awaited transparently.
  */
 export async function convertMessageContent(raw, messageType, ctx) {
-    const fn = converters.get(messageType) ?? converters.get("unknown");
+    const fn = converters.get(messageType) ?? converters.get('unknown');
     if (!fn) {
         return { content: raw, resources: [] };
     }
@@ -62,7 +64,7 @@ export function buildConvertContextFromItem(item, fallbackMessageId, accountId) 
         const info = {
             key: m.key,
             openId,
-            name: m.name ?? "",
+            name: m.name ?? '',
             isBot: false,
         };
         mentions.set(m.key, info);
@@ -72,9 +74,8 @@ export function buildConvertContextFromItem(item, fallbackMessageId, accountId) 
         mentions,
         mentionsByOpenId,
         messageId: item.message_id ?? fallbackMessageId,
-        resolveUserName: accountId
-            ? (openId) => getUserNameCache(accountId).get(openId)
-            : undefined,
+        accountId,
+        resolveUserName: accountId ? (openId) => getUserNameCache(accountId).get(openId) : undefined,
     };
 }
 // ---------------------------------------------------------------------------
@@ -94,15 +95,11 @@ export function resolveMentions(text, ctx) {
     for (const [key, info] of ctx.mentions) {
         if (info.isBot && ctx.stripBotMentions) {
             // 仅在事件推送场景才删除 bot mention
-            result = result
-                .replace(new RegExp(`@${escapeRegExp(info.name)}\\s*`, "g"), "")
-                .trim();
-            result = result
-                .replace(new RegExp(escapeRegExp(key) + "\\s*", "g"), "")
-                .trim();
+            result = result.replace(new RegExp(`@${escapeRegExp(info.name)}\\s*`, 'g'), '').trim();
+            result = result.replace(new RegExp(escapeRegExp(key) + '\\s*', 'g'), '').trim();
         }
         else {
-            result = result.replace(new RegExp(escapeRegExp(key), "g"), `@${info.name}`);
+            result = result.replace(new RegExp(escapeRegExp(key), 'g'), `@${info.name}`);
         }
     }
     return result;

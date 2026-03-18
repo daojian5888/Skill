@@ -4,8 +4,8 @@
  *
  * CardKit streaming APIs for Feishu/Lark.
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { FeishuSendResult } from "../messaging/types.js";
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { FeishuSendResult } from '../messaging/types';
 /**
  * Create a card entity via the CardKit API.
  *

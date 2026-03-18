@@ -7,7 +7,7 @@
  * Provides runtime validation, sensible defaults, and cross-field refinements
  * so that every consuming module can rely on well-typed configuration objects.
  */
-import { z } from "zod";
+import { z } from 'zod';
 export { z };
 export declare const UATConfigSchema: z.ZodOptional<z.ZodObject<{
     enabled: z.ZodOptional<z.ZodBoolean>;
@@ -37,7 +37,7 @@ export declare const FeishuAccountConfigSchema: z.ZodObject<{
     verificationToken: z.ZodOptional<z.ZodString>;
     name: z.ZodOptional<z.ZodString>;
     enabled: z.ZodOptional<z.ZodBoolean>;
-    domain: z.ZodOptional<z.ZodString>;
+    domain: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<"feishu">, z.ZodLiteral<"lark">, z.ZodString]>>;
     connectionMode: z.ZodOptional<z.ZodEnum<{
         websocket: "websocket";
         webhook: "webhook";
@@ -164,10 +164,6 @@ export declare const FeishuAccountConfigSchema: z.ZodObject<{
         enabled: z.ZodOptional<z.ZodBoolean>;
         allowedScopes: z.ZodOptional<z.ZodArray<z.ZodString>>;
         blockedScopes: z.ZodOptional<z.ZodArray<z.ZodString>>;
-    }, z.core.$strip>>;
-    extra: z.ZodOptional<z.ZodObject<{
-        domain: z.ZodOptional<z.ZodString>;
-        httpHeaders: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 export declare const FeishuConfigSchema: z.ZodObject<{
@@ -177,7 +173,7 @@ export declare const FeishuConfigSchema: z.ZodObject<{
     verificationToken: z.ZodOptional<z.ZodString>;
     name: z.ZodOptional<z.ZodString>;
     enabled: z.ZodOptional<z.ZodBoolean>;
-    domain: z.ZodOptional<z.ZodString>;
+    domain: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<"feishu">, z.ZodLiteral<"lark">, z.ZodString]>>;
     connectionMode: z.ZodOptional<z.ZodEnum<{
         websocket: "websocket";
         webhook: "webhook";
@@ -305,10 +301,6 @@ export declare const FeishuConfigSchema: z.ZodObject<{
         allowedScopes: z.ZodOptional<z.ZodArray<z.ZodString>>;
         blockedScopes: z.ZodOptional<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>>;
-    extra: z.ZodOptional<z.ZodObject<{
-        domain: z.ZodOptional<z.ZodString>;
-        httpHeaders: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-    }, z.core.$strip>>;
     accounts: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodObject<{
         appId: z.ZodOptional<z.ZodString>;
         appSecret: z.ZodOptional<z.ZodString>;
@@ -316,7 +308,7 @@ export declare const FeishuConfigSchema: z.ZodObject<{
         verificationToken: z.ZodOptional<z.ZodString>;
         name: z.ZodOptional<z.ZodString>;
         enabled: z.ZodOptional<z.ZodBoolean>;
-        domain: z.ZodOptional<z.ZodString>;
+        domain: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<"feishu">, z.ZodLiteral<"lark">, z.ZodString]>>;
         connectionMode: z.ZodOptional<z.ZodEnum<{
             websocket: "websocket";
             webhook: "webhook";
@@ -444,10 +436,14 @@ export declare const FeishuConfigSchema: z.ZodObject<{
             allowedScopes: z.ZodOptional<z.ZodArray<z.ZodString>>;
             blockedScopes: z.ZodOptional<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>>;
-        extra: z.ZodOptional<z.ZodObject<{
-            domain: z.ZodOptional<z.ZodString>;
-            httpHeaders: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-        }, z.core.$strip>>;
     }, z.core.$strip>>>;
 }, z.core.$strip>;
+/**
+ * JSON Schema derived from FeishuConfigSchema.
+ *
+ * - `io: "input"` exposes the input type for `.transform()` schemas (e.g. AllowFromSchema).
+ * - `unrepresentable: "any"` degrades `.superRefine()` constraints to `{}`.
+ * - `target: "draft-07"` matches the plugin system's expected JSON Schema version.
+ */
+export declare const FEISHU_CONFIG_JSON_SCHEMA: Record<string, unknown>;
 //# sourceMappingURL=config-schema.d.ts.map

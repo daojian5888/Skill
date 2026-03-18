@@ -8,19 +8,6 @@
  * from Feishu API error messages.
  */
 /**
- * Permission priority for sorting.
- * Lower number = higher priority.
- * - read: 1 (highest)
- * - write: 2
- * - other / both read+write: 3 (lowest)
- */
-export declare function getPermissionPriority(scope: string): number;
-/**
- * Extract the highest-priority permission from a scope list.
- * Returns the permission with the lowest priority number (read > write > other).
- */
-export declare function extractHighestPriorityScope(scopeList: string): string;
-/**
  * Extract permission grant URL from a Feishu error message and optimize it
  * by keeping only the highest-priority permission.
  *

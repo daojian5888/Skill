@@ -8,22 +8,24 @@
  * behalf of a user.  Tokens are read from the OS Keychain, refreshed
  * transparently, and **never** exposed to the AI layer.
  */
-import type { LarkBrand } from "./types.js";
-export type UATCallOptions = {
+import type { LarkBrand } from './types';
+import { NeedAuthorizationError } from './auth-errors';
+export { NeedAuthorizationError };
+export interface UATCallOptions {
     userOpenId: string;
     appId: string;
     appSecret: string;
     domain: LarkBrand;
-};
-export type UATStatus = {
+}
+export interface UATStatus {
     authorized: boolean;
     userOpenId: string;
     scope?: string;
     expiresAt?: number;
     refreshExpiresAt?: number;
     grantedAt?: number;
-    tokenStatus?: "valid" | "needs_refresh" | "expired";
-};
+    tokenStatus?: 'valid' | 'needs_refresh' | 'expired';
+}
 /**
  * Obtain a valid access_token for the given user.
  *
@@ -39,19 +41,7 @@ export declare function getValidAccessToken(opts: UATCallOptions): Promise<strin
  */
 export declare function callWithUAT<T>(opts: UATCallOptions, apiCall: (accessToken: string) => Promise<T>): Promise<T>;
 /**
- * Query the authorisation status for a user (does **not** trigger refresh).
- */
-export declare function getUATStatus(appId: string, userOpenId: string): Promise<UATStatus>;
-/**
  * Revoke a user's UAT by removing it from the Keychain.
  */
 export declare function revokeUAT(appId: string, userOpenId: string): Promise<void>;
-/**
- * Thrown when no valid UAT exists and the user needs to (re-)authorise.
- * Callers should catch this and trigger the OAuth flow.
- */
-export declare class NeedAuthorizationError extends Error {
-    readonly userOpenId: string;
-    constructor(userOpenId: string);
-}
 //# sourceMappingURL=uat-client.d.ts.map

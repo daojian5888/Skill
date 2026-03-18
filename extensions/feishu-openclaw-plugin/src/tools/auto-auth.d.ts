@@ -23,12 +23,12 @@
  *   → 回退到原 handleInvokeError（不触发自动授权）
  *
  * 降级策略（保守）：以下情况均回退到 handleInvokeError：
- * - 无 TraceContext（非消息场景）
+ * - 无 LarkTicket（非消息场景）
  * - 无 senderOpenId（无法确定授权对象）
  * - 账号未配置（!acct.configured）
  * - 任何步骤抛出异常
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
 /**
  * 处理 card.action.trigger 回调事件（由 monitor.ts 调用）。
  *
@@ -53,11 +53,5 @@ export declare function handleCardAction(data: unknown, cfg: ClawdbotConfig, acc
  * @param err - invoke() 或其他逻辑抛出的错误
  * @param cfg - OpenClaw 配置对象（从工具注册函数的闭包中获取）
  */
-export declare function handleInvokeErrorWithAutoAuth(err: unknown, cfg: ClawdbotConfig): Promise<{
-    content: Array<{
-        type: "text";
-        text: string;
-    }>;
-    details: unknown;
-}>;
+export declare function handleInvokeErrorWithAutoAuth(err: unknown, cfg: ClawdbotConfig): Promise<import("./helpers").ToolResult>;
 //# sourceMappingURL=auto-auth.d.ts.map

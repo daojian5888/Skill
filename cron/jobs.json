@@ -1,4 +1,150 @@
 {
   "version": 1,
-  "jobs": []
+  "jobs": [
+    {
+      "id": "c42d0c3d-fe26-49b7-977d-adb6ad322857",
+      "agentId": "main",
+      "sessionKey": "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b",
+      "name": "请按照日报点评工作流执行昨日日报点评",
+      "enabled": true,
+      "createdAtMs": 1773816576724,
+      "updatedAtMs": 1773816576724,
+      "schedule": {
+        "expr": "0 10 * * 1-5",
+        "kind": "cron",
+        "tz": "Asia/Shanghai"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "请按照日报点评工作流执行昨日日报点评",
+        "model": "default",
+        "thinking": "high"
+      },
+      "delivery": {
+        "channel": "feishu",
+        "mode": "announce"
+      },
+      "state": {
+        "nextRunAtMs": 1773885600000
+      }
+    },
+    {
+      "id": "215b7619-c198-4ed9-89bf-88e6c89cfee6",
+      "agentId": "main",
+      "sessionKey": "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b",
+      "name": "请按照日报点评工作流执行本月的日报汇总评价和打分。首先判断今天是否为本月最后一个工作日，如果是则执行，否则回复\"本月最…",
+      "enabled": true,
+      "createdAtMs": 1773820023502,
+      "updatedAtMs": 1773820023502,
+      "schedule": {
+        "expr": "0 17 * * 5",
+        "kind": "cron",
+        "tz": "Asia/Shanghai"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "请按照日报点评工作流执行本月的日报汇总评价和打分。首先判断今天是否为本月最后一个工作日，如果是则执行，否则回复\"本月最后工作日不是今天，不执行\"",
+        "model": "default",
+        "thinking": "high"
+      },
+      "delivery": {
+        "channel": "feishu",
+        "mode": "announce"
+      },
+      "state": {
+        "nextRunAtMs": 1773997200000
+      }
+    },
+    {
+      "id": "05e9f9b7-5879-4a26-8345-3d4d0563a347",
+      "agentId": "main",
+      "sessionKey": "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b",
+      "name": "请按照日报点评工作流执行本季度的日报汇总评价和打分。首先判断今天是否为本季度最后一个工作日，如果是则执行，否则回复\"本…",
+      "enabled": true,
+      "createdAtMs": 1773820028827,
+      "updatedAtMs": 1773820028827,
+      "schedule": {
+        "expr": "0 17 * * 5",
+        "kind": "cron",
+        "tz": "Asia/Shanghai"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "请按照日报点评工作流执行本季度的日报汇总评价和打分。首先判断今天是否为本季度最后一个工作日，如果是则执行，否则回复\"本季度最后工作日不是今天，不执行\"",
+        "model": "default",
+        "thinking": "high"
+      },
+      "delivery": {
+        "channel": "feishu",
+        "mode": "announce"
+      },
+      "state": {
+        "nextRunAtMs": 1773997200000
+      }
+    },
+    {
+      "id": "05f55522-dc92-4980-b2c3-4084293e8607",
+      "agentId": "main",
+      "sessionKey": "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b",
+      "name": "请按照日报点评工作流执行每年日报分数汇总。首先判断今天是否为今年最后一个工作日，如果是则执行，否则回复\"今年最后工作日…",
+      "enabled": true,
+      "createdAtMs": 1773820198079,
+      "updatedAtMs": 1773820198079,
+      "schedule": {
+        "expr": "0 17 28-31 12 *",
+        "kind": "cron",
+        "tz": "Asia/Shanghai"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "请按照日报点评工作流执行每年日报分数汇总。首先判断今天是否为今年最后一个工作日，如果是则执行，否则回复\"今年最后工作日不是今天，不执行\"",
+        "model": "default",
+        "thinking": "high"
+      },
+      "delivery": {
+        "channel": "feishu",
+        "mode": "announce"
+      },
+      "state": {
+        "nextRunAtMs": 1798448400000
+      }
+    },
+    {
+      "id": "cfd2966c-5e50-4153-ac26-a51b644dbe4a",
+      "agentId": "main",
+      "sessionKey": "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b",
+      "name": "每日AI科技早报",
+      "enabled": true,
+      "createdAtMs": 1773825624158,
+      "updatedAtMs": 1773825624158,
+      "schedule": {
+        "expr": "0 9 * * *",
+        "tz": "Asia/Shanghai",
+        "kind": "cron"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "请帮我搜索今日AI科技领域的热点新闻和重要资讯，整理成简洁清晰的早报内容发给用户。搜索关键词：AI、人工智能、大模型、OpenAI、ChatGPT、DeepSeek等。\n\n要求：\n1. 标题+简要说明\n2. 控制在5-10条以内\n3. 简洁清晰\n4. 早上9点发送，所以搜索的是最新动态",
+        "model": "minimax/MiniMax-M2.5",
+        "timeoutSeconds": 300
+      },
+      "delivery": {
+        "mode": "announce",
+        "to": "ou_d75c71eb9cc3369175d62f2892cd7b8b"
+      },
+      "state": {
+        "nextRunAtMs": 1773882000000
+      }
+    }
+  ]
 }

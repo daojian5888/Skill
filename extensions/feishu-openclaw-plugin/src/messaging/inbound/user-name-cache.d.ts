@@ -11,8 +11,8 @@
  * - `resolveUserName()` — single-user fallback via `contact.user.get`
  * - `clearUserNameCache()` — teardown hook (called from LarkClient.clearCache)
  */
-import type { LarkAccount } from "../../core/types.js";
-import { type PermissionError } from "./permission.js";
+import type { LarkAccount } from '../../core/types';
+import { type PermissionError } from './permission';
 export declare class UserNameCache {
     private map;
     private maxSize;
@@ -65,10 +65,10 @@ export declare function batchResolveUserNames(params: {
  * account and log function, populating the TAT user-name cache.
  */
 export declare function createBatchResolveNames(account: LarkAccount, log: (...args: unknown[]) => void): (openIds: string[]) => Promise<void>;
-export type ResolveUserNameResult = {
+export interface ResolveUserNameResult {
     name?: string;
     permissionError?: PermissionError;
-};
+}
 /**
  * Resolve a single user's display name.
  *

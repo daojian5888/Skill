@@ -4,53 +4,66 @@
  *
  * Reaction event handler for the Feishu/Lark channel plugin.
  *
- * Converts `im.message.reaction.created_v1` events into synthetic
- * {@link FeishuMessageEvent} objects so the AI can contextually decide
- * how to respond (text reply, emoji reaction, or nothing at all).
+ * Handles `im.message.reaction.created_v1` events by building a
+ * {@link MessageContext} directly and dispatching to the agent via
+ * {@link dispatchToAgent}, bypassing the full 7-stage message pipeline.
  *
  * Controlled by `reactionNotifications` (default: "own"):
  *   - `"off"`  — reaction events are silently ignored.
  *   - `"own"`  — only reactions on the bot's own messages are dispatched.
  *   - `"all"`  — reactions on any message in the chat are dispatched.
  */
-import * as crypto from "node:crypto";
-import { getLarkAccount } from "../../core/accounts.js";
-import { getMessageFeishu, getChatTypeFeishu } from "../outbound/fetch.js";
-import { isThreadCapableGroup } from "../../core/chat-info-cache.js";
-import { handleFeishuMessage } from "./handler.js";
-import { trace } from "../../core/trace.js";
+import * as crypto from 'node:crypto';
+import { DEFAULT_GROUP_HISTORY_LIMIT } from 'openclaw/plugin-sdk';
+import { getLarkAccount } from '../../core/accounts';
+import { getMessageFeishu } from '../shared/message-lookup';
+import { isThreadCapableGroup, getChatTypeFeishu } from '../../core/chat-info-cache';
+import { resolveUserName } from './user-name-cache';
+import { dispatchToAgent } from './dispatch';
+import { resolveFeishuGroupConfig } from './policy';
+import { larkLogger } from '../../core/lark-logger';
+const logger = larkLogger('inbound/reaction-handler');
 const REACTION_VERIFY_TIMEOUT_MS = 3_000;
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-export async function handleFeishuReaction(params) {
-    const { cfg, event, botOpenId, runtime, chatHistories, accountId } = params;
-    const log = runtime?.log ?? console.log;
-    const error = runtime?.error ?? console.error;
+/**
+ * Pre-resolve reaction context before enqueuing.
+ *
+ * Performs account config checks, safety filters, API fetch of the
+ * original message, ownership verification, chat type resolution, and
+ * thread-capable detection.  Returns `null` when the reaction should
+ * be skipped (mode off, safety filter, timeout, ownership mismatch,
+ * thread-capable group with threadSession enabled).
+ *
+ * This function is intentionally separated so that the caller
+ * (event-handlers.ts) can resolve the real chatId *before* enqueuing,
+ * ensuring the reaction shares the same queue key as normal messages
+ * for the same chat.
+ */
+export async function resolveReactionContext(params) {
+    const { cfg, event, botOpenId, runtime, accountId } = params;
+    const log = runtime?.log ?? ((...args) => logger.info(args.map(String).join(' ')));
     const account = getLarkAccount(cfg, accountId);
-    const reactionMode = account.config?.reactionNotifications ?? "own";
-    if (reactionMode === "off") {
-        return;
+    const reactionMode = account.config?.reactionNotifications ?? 'own';
+    if (reactionMode === 'off') {
+        return null;
     }
-    const threadSessionEnabled = account.config?.threadSession === true;
     const emojiType = event.reaction_type?.emoji_type;
     const messageId = event.message_id;
-    const operatorOpenId = event.user_id?.open_id ?? "";
+    const operatorOpenId = event.user_id?.open_id ?? '';
     if (!emojiType || !messageId || !operatorOpenId) {
-        return;
+        return null;
     }
     // ---- Safety filters (aligned with official) ----
-    if (event.operator_type === "app" || operatorOpenId === botOpenId) {
+    if (event.operator_type === 'app' || operatorOpenId === botOpenId) {
         log(`feishu[${accountId}]: ignoring app/self reaction on ${messageId}`);
-        return;
+        return null;
     }
-    if (emojiType === "Typing") {
-        return;
+    if (emojiType === 'Typing') {
+        return null;
     }
     // "own" mode requires botOpenId to verify message ownership
-    if (reactionMode === "own" && !botOpenId) {
+    if (reactionMode === 'own' && !botOpenId) {
         log(`feishu[${accountId}]: bot open_id unavailable, skipping reaction on ${messageId}`);
-        return;
+        return null;
     }
     // ---- Fetch original message with timeout (fail-closed) ----
     const msg = await Promise.race([
@@ -59,89 +72,145 @@ export async function handleFeishuReaction(params) {
     ]).catch(() => null);
     if (!msg) {
         log(`feishu[${accountId}]: reacted message ${messageId} not found or timed out, skipping`);
-        return;
+        return null;
     }
-    const isBotMessage = msg.senderType === "app" || msg.senderId === botOpenId;
-    if (reactionMode === "own" && !isBotMessage) {
-        log(`feishu[${accountId}]: reaction on non-bot message ${messageId}, skipping`);
-        return;
+    // The mget API returns app_id (cli_xxx) as sender.id for bot messages,
+    // not the bot's open_id (ou_xxx). Match against the account's appId.
+    const isBotMessage = msg.senderType === 'app' && msg.senderId === account.appId;
+    if (reactionMode === 'own' && !isBotMessage) {
+        log(`feishu[${accountId}]: reaction on non-bot message ${messageId}, skipping (senderId=${msg.senderId}, senderType=${msg.senderType}, botOpenId=${botOpenId}, appId=${account.appId})`);
+        return null;
     }
-    // ---- Resolve chat context ----
+    // ---- Resolve effective chatId ----
+    const rawChatId = event.chat_id?.trim() || msg.chatId?.trim() || '';
+    const effectiveChatId = rawChatId || `p2p:${operatorOpenId}`;
+    // ---- Resolve chat type ----
     // im.message.reaction.created_v1 does NOT include chat_id or chat_type
     // (confirmed from Feishu docs). The message GET API returns chat_id but
     // NOT chat_type. So we must determine chat_type via im.chat.get.
-    const chatId = event.chat_id?.trim() || msg.chatId?.trim() || "";
+    //
     // Determine chat type: event payload → fetched message → im.chat.get API.
     // The first two sources are almost always empty for reaction events, so
     // getChatTypeFeishu is the primary path.
-    let chatType = event.chat_type === "group" ? "group"
-        : event.chat_type === "p2p" || event.chat_type === "private" ? "p2p"
-            : (msg.chatType === "group" || msg.chatType === "p2p") ? msg.chatType
-                : "p2p"; // tentative default, overridden below when chatId is available
+    let chatType = event.chat_type === 'group'
+        ? 'group'
+        : event.chat_type === 'p2p' || event.chat_type === 'private'
+            ? 'p2p'
+            : msg.chatType === 'group' || msg.chatType === 'p2p'
+                ? msg.chatType
+                : 'p2p'; // tentative default, overridden below when chatId is available
     // When we have a real chat_id (from event or message API), query the
     // authoritative chat type via im.chat.get. This is the only reliable
     // source for reaction events.
-    if (chatId && chatType === "p2p" && !event.chat_type && !msg.chatType) {
+    if (rawChatId && chatType === 'p2p' && !event.chat_type && !msg.chatType) {
         try {
-            chatType = await getChatTypeFeishu({ cfg, chatId, accountId });
+            chatType = await getChatTypeFeishu({ cfg, chatId: rawChatId, accountId });
         }
         catch {
             // getChatTypeFeishu already logs errors and defaults to "p2p"
         }
     }
-    // If we still have no chatId, synthesise one for the session key.
-    const effectiveChatId = chatId || `p2p:${operatorOpenId}`;
     // ---- Thread session: skip for thread-capable groups ----
     // The mget API does not return thread_id, so we cannot route the
     // synthetic event to the correct thread session. Skip reaction handling
     // only for thread-capable groups (topic / thread-mode); p2p and regular
     // groups are unaffected since they have no threads.
-    if (threadSessionEnabled && chatId) {
-        const threadCapable = await isThreadCapableGroup({ cfg, chatId, accountId });
-        if (threadCapable) {
-            log(`feishu[${accountId}]: reaction on thread-capable group ${chatId}, skipping (threadSession enabled)`);
-            return;
+    let threadCapable = false;
+    const threadSessionEnabled = account.config?.threadSession === true;
+    if (rawChatId && chatType === 'group') {
+        threadCapable = await isThreadCapableGroup({ cfg, chatId: rawChatId, accountId });
+        if (threadSessionEnabled && threadCapable) {
+            log(`feishu[${accountId}]: reaction on thread-capable group ${rawChatId}, skipping (threadSession enabled)`);
+            return null;
         }
     }
-    // ---- Build synthetic event ----
-    log(`feishu[${accountId}]: reaction "${emojiType}" by ${operatorOpenId} on ${messageId} (chatId=${effectiveChatId}, chatType=${chatType}${msg.threadId ? `, thread=${msg.threadId}` : ""}), dispatching to AI`);
-    trace.info(`reaction "${emojiType}" by ${operatorOpenId} on ${messageId} (chatType=${chatType})`);
-    // Include original content excerpt for richer AI context (our addition over official).
-    // Format as a natural action description so the AI treats it as user intent
-    // rather than a passive system notification.
-    const excerpt = msg.content.length > 200 ? msg.content.slice(0, 200) + "…" : msg.content;
+    return {
+        chatId: effectiveChatId,
+        chatType,
+        threadId: msg.threadId,
+        threadCapable,
+        msg,
+    };
+}
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+export async function handleFeishuReaction(params) {
+    const { cfg, event, runtime, chatHistories, accountId, preResolved } = params;
+    const log = runtime?.log ?? ((...args) => logger.info(args.map(String).join(' ')));
+    const error = runtime?.error ?? ((...args) => logger.error(args.map(String).join(' ')));
+    const emojiType = event.reaction_type?.emoji_type;
+    const messageId = event.message_id;
+    const operatorOpenId = event.user_id?.open_id ?? '';
+    // ---- Step A: Account resolution + accountScopedCfg ----
+    const account = getLarkAccount(cfg, accountId);
+    const accountFeishuCfg = account.config;
+    const accountScopedCfg = {
+        ...cfg,
+        channels: { ...cfg.channels, feishu: accountFeishuCfg },
+    };
+    // ---- Step B: Build MessageContext directly ----
+    const excerpt = preResolved.msg.content.length > 200 ? preResolved.msg.content.slice(0, 200) + '…' : preResolved.msg.content;
     const syntheticText = excerpt
         ? `[reacted with ${emojiType} to message ${messageId}: "${excerpt}"]`
         : `[reacted with ${emojiType} to message ${messageId}]`;
-    const syntheticEvent = {
-        sender: {
+    const syntheticMessageId = `${messageId}:reaction:${emojiType}:${crypto.randomUUID()}`;
+    let ctx = {
+        chatId: preResolved.chatId,
+        messageId: syntheticMessageId,
+        senderId: operatorOpenId,
+        chatType: preResolved.chatType,
+        content: syntheticText,
+        contentType: 'text',
+        resources: [],
+        mentions: [],
+        threadId: preResolved.threadId,
+        rawMessage: {
+            message_id: syntheticMessageId,
+            chat_id: preResolved.chatId,
+            chat_type: preResolved.chatType,
+            message_type: 'text',
+            content: JSON.stringify({ text: syntheticText }),
+            create_time: event.action_time ?? String(Date.now()),
+            thread_id: preResolved.threadId,
+        },
+        rawSender: {
             sender_id: {
                 open_id: operatorOpenId,
                 user_id: event.user_id?.user_id,
                 union_id: event.user_id?.union_id,
             },
-            sender_type: "user",
-        },
-        message: {
-            message_id: `${messageId}:reaction:${emojiType}:${crypto.randomUUID()}`,
-            chat_id: effectiveChatId,
-            chat_type: chatType,
-            message_type: "text",
-            content: JSON.stringify({ text: syntheticText }),
-            create_time: event.action_time ?? String(Date.now()),
-            thread_id: msg.threadId,
+            sender_type: 'user',
         },
     };
+    // ---- Step C: Sender name resolution ----
+    const senderResult = await resolveUserName({ account, openId: operatorOpenId, log });
+    if (senderResult.name) {
+        ctx = { ...ctx, senderName: senderResult.name };
+    }
+    log(`feishu[${accountId}]: reaction "${emojiType}" by ${operatorOpenId} on ${messageId} (chatId=${preResolved.chatId}, chatType=${preResolved.chatType}${preResolved.threadId ? `, thread=${preResolved.threadId}` : ''}), dispatching to AI`);
+    logger.info(`reaction "${emojiType}" by ${operatorOpenId} on ${messageId} (chatType=${preResolved.chatType})`);
+    // ---- Step D: Group config resolution ----
+    const isGroup = ctx.chatType === 'group';
+    const groupConfig = isGroup ? resolveFeishuGroupConfig({ cfg: accountFeishuCfg, groupId: ctx.chatId }) : undefined;
+    const defaultGroupConfig = isGroup ? accountFeishuCfg?.groups?.['*'] : undefined;
+    const historyLimit = Math.max(0, accountFeishuCfg?.historyLimit ?? accountScopedCfg.messages?.groupChat?.historyLimit ?? DEFAULT_GROUP_HISTORY_LIMIT);
+    // ---- Step E: Dispatch directly to agent ----
     try {
-        await handleFeishuMessage({
-            cfg,
-            event: syntheticEvent,
-            botOpenId,
+        await dispatchToAgent({
+            ctx,
+            permissionError: undefined,
+            mediaPayload: {},
+            quotedContent: undefined,
+            account,
+            accountScopedCfg,
             runtime,
             chatHistories,
-            accountId,
+            historyLimit,
             replyToMessageId: messageId,
-            forceMention: true,
+            commandAuthorized: false,
+            groupConfig,
+            defaultGroupConfig,
             skipTyping: true,
         });
     }

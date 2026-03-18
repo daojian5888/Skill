@@ -4,7 +4,7 @@
  *
  * Converter for "share_chat" and "share_user" message types.
  */
-import type { ContentConverterFn } from "./types.js";
+import type { ContentConverterFn } from './types';
 export declare const convertShareChat: ContentConverterFn;
 export declare const convertShareUser: ContentConverterFn;
 //# sourceMappingURL=share.d.ts.map

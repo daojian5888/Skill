@@ -13,17 +13,17 @@
  * This provides a lightweight visual cue that the bot has acknowledged
  * the message and is working on a reply.
  */
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { OpenClawConfig } from 'openclaw/plugin-sdk';
 /**
  * Tracks the state of an active typing indicator so it can be
  * removed later.
  */
-export type TypingIndicatorState = {
+export interface TypingIndicatorState {
     /** The message ID that the reaction was added to. */
     messageId: string;
     /** The reaction ID returned by the API, or null if the add failed. */
     reactionId: string | null;
-};
+}
 /**
  * Add a typing indicator to a message by creating an emoji reaction.
  *

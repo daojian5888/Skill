@@ -7,7 +7,7 @@
  * Each boolean flag controls whether a particular metadata item is displayed
  * in the card footer (e.g. elapsed time, model name).
  */
-import type { FeishuFooterConfig } from "./types.js";
+import type { FeishuFooterConfig } from './types';
 /**
  * The default footer configuration.
  *

@@ -4,6 +4,6 @@
  *
  * Converter for "image" message type.
  */
-import type { ContentConverterFn } from "./types.js";
+import type { ContentConverterFn } from './types';
 export declare const convertImage: ContentConverterFn;
 //# sourceMappingURL=image.d.ts.map

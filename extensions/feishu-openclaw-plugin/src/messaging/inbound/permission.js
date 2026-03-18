@@ -7,25 +7,26 @@
  * Extracted from bot.ts: PermissionError type, extractPermissionError,
  * PERMISSION_ERROR_COOLDOWN_MS, permissionErrorNotifiedAt.
  */
-import { extractPermissionGrantUrl } from "../../core/permission-url.js";
+import { extractPermissionGrantUrl } from '../../core/permission-url';
+import { LARK_ERROR } from '../../core/auth-errors';
 // ---------------------------------------------------------------------------
 // Permission error extraction
 // ---------------------------------------------------------------------------
 export function extractPermissionError(err) {
-    if (!err || typeof err !== "object") {
+    if (!err || typeof err !== 'object') {
         return null;
     }
     const axiosErr = err;
     const data = axiosErr.response?.data;
-    if (!data || typeof data !== "object") {
+    if (!data || typeof data !== 'object') {
         return null;
     }
     const feishuErr = data;
     // Feishu permission error code
-    if (feishuErr.code !== 99991672) {
+    if (feishuErr.code !== LARK_ERROR.APP_SCOPE_MISSING) {
         return null;
     }
-    const msg = feishuErr.msg ?? "";
+    const msg = feishuErr.msg ?? '';
     const grantUrl = extractPermissionGrantUrl(msg);
     if (!grantUrl) {
         return null;

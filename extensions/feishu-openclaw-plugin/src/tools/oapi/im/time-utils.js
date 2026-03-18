@@ -2,10 +2,10 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * 时间工具函数 — 对齐 Go 实现 (time.go + timerange.go)
+ * 时间工具函数 — 对齐 Go 实现 (time.go + timerange.go)
  *
-  * 以 ISO 8601 (RFC 3339) 作为标准时间交换格式，
-  * 提供 ISO 8601 ↔ Unix 转换工具及时间范围解析。
+ * 以 ISO 8601 (RFC 3339) 作为标准时间交换格式，
+ * 提供 ISO 8601 ↔ Unix 转换工具及时间范围解析。
  */
 const BJ_OFFSET_MS = 8 * 60 * 60 * 1000;
 // ===========================================================================
@@ -15,11 +15,11 @@ const BJ_OFFSET_MS = 8 * 60 * 60 * 1000;
 function formatBeijingISO(d) {
     const bj = new Date(d.getTime() + BJ_OFFSET_MS);
     const y = bj.getUTCFullYear();
-    const mo = String(bj.getUTCMonth() + 1).padStart(2, "0");
-    const da = String(bj.getUTCDate()).padStart(2, "0");
-    const h = String(bj.getUTCHours()).padStart(2, "0");
-    const mi = String(bj.getUTCMinutes()).padStart(2, "0");
-    const s = String(bj.getUTCSeconds()).padStart(2, "0");
+    const mo = String(bj.getUTCMonth() + 1).padStart(2, '0');
+    const da = String(bj.getUTCDate()).padStart(2, '0');
+    const h = String(bj.getUTCHours()).padStart(2, '0');
+    const mi = String(bj.getUTCMinutes()).padStart(2, '0');
+    const s = String(bj.getUTCSeconds()).padStart(2, '0');
     return `${y}-${mo}-${da}T${h}:${mi}:${s}+08:00`;
 }
 // ---------------------------------------------------------------------------
@@ -83,25 +83,25 @@ export function parseTimeRange(input) {
     let start;
     let end;
     switch (input) {
-        case "today":
+        case 'today':
             start = beijingStartOfDay(bjNow);
             end = now;
             break;
-        case "yesterday": {
+        case 'yesterday': {
             const d = new Date(bjNow);
             d.setUTCDate(d.getUTCDate() - 1);
             start = beijingStartOfDay(d);
             end = beijingEndOfDay(d);
             break;
         }
-        case "day_before_yesterday": {
+        case 'day_before_yesterday': {
             const d = new Date(bjNow);
             d.setUTCDate(d.getUTCDate() - 2);
             start = beijingStartOfDay(d);
             end = beijingEndOfDay(d);
             break;
         }
-        case "this_week": {
+        case 'this_week': {
             const day = bjNow.getUTCDay(); // 0=Sun .. 6=Sat
             const diffToMon = day === 0 ? 6 : day - 1;
             const monday = new Date(bjNow);
@@ -110,7 +110,7 @@ export function parseTimeRange(input) {
             end = now;
             break;
         }
-        case "last_week": {
+        case 'last_week': {
             const day = bjNow.getUTCDay();
             const diffToMon = day === 0 ? 6 : day - 1;
             const thisMonday = new Date(bjNow);
@@ -123,13 +123,13 @@ export function parseTimeRange(input) {
             end = beijingEndOfDay(lastSunday);
             break;
         }
-        case "this_month": {
+        case 'this_month': {
             const firstDay = new Date(Date.UTC(bjNow.getUTCFullYear(), bjNow.getUTCMonth(), 1));
             start = beijingStartOfDay(firstDay);
             end = now;
             break;
         }
-        case "last_month": {
+        case 'last_month': {
             const firstDayThisMonth = new Date(Date.UTC(bjNow.getUTCFullYear(), bjNow.getUTCMonth(), 1));
             const lastDayPrevMonth = new Date(firstDayThisMonth);
             lastDayPrevMonth.setUTCDate(lastDayPrevMonth.getUTCDate() - 1);
@@ -143,10 +143,10 @@ export function parseTimeRange(input) {
             const match = input.match(/^last_(\d+)_(minutes?|hours?|days?)$/);
             if (!match) {
                 throw new Error(`不支持的 relative_time 格式: "${input}"。` +
-                    "支持: today, yesterday, day_before_yesterday, this_week, last_week, this_month, last_month, last_{N}_{unit}（unit: minutes/hours/days）");
+                    '支持: today, yesterday, day_before_yesterday, this_week, last_week, this_month, last_month, last_{N}_{unit}（unit: minutes/hours/days）');
             }
             const n = parseInt(match[1], 10);
-            const unit = match[2].replace(/s$/, ""); // normalize plural
+            const unit = match[2].replace(/s$/, ''); // normalize plural
             start = subtractFromNow(now, n, unit);
             end = now;
             break;
@@ -185,13 +185,13 @@ function beijingEndOfDay(bjDate) {
 function subtractFromNow(now, n, unit) {
     const d = new Date(now);
     switch (unit) {
-        case "minute":
+        case 'minute':
             d.setMinutes(d.getMinutes() - n);
             break;
-        case "hour":
+        case 'hour':
             d.setHours(d.getHours() - n);
             break;
-        case "day":
+        case 'day':
             d.setDate(d.getDate() - n);
             break;
         default:

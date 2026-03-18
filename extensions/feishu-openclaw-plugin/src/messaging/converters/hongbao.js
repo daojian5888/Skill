@@ -2,13 +2,13 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * Converter for "hongbao" (red packet) message type.
+ * Converter for "hongbao" (red packet) message type.
  */
-import { safeParse } from "./utils.js";
+import { safeParse } from './utils';
 export const convertHongbao = (raw) => {
     const parsed = safeParse(raw);
     const text = parsed?.text;
-    const textAttr = text ? ` text="${text}"` : "";
+    const textAttr = text ? ` text="${text}"` : '';
     return {
         content: `<hongbao${textAttr}/>`,
         resources: [],

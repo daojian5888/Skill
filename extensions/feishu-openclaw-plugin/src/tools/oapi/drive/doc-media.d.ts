@@ -15,6 +15,6 @@
  * - sdk.drive.v1.media.download - 下载素材
  * - sdk.board.v1.whiteboard.downloadAsImage - 下载画板缩略图
  */
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
 export declare function registerDocMediaTool(api: OpenClawPluginApi): void;
 //# sourceMappingURL=doc-media.d.ts.map

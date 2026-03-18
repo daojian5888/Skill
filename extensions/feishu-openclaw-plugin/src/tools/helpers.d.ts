@@ -2,21 +2,21 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * 飞书工具开发的通用辅助函数
+ * 飞书工具开发的通用辅助函数
  *
-  * 提供所有工具通用的模式，减少重复代码。
+ * 提供所有工具通用的模式，减少重复代码。
  */
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { Client as LarkSdkClient } from "@larksuiteoapi/node-sdk";
-import type { LarkAccount } from "../core/types.js";
-import { ToolClient } from "../core/tool-client.js";
+import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { Client as LarkSdkClient } from '@larksuiteoapi/node-sdk';
+import type { LarkAccount } from '../core/types';
+import { ToolClient } from '../core/tool-client';
 /**
  * 工具返回值的标准格式
  */
 export interface ToolResult {
     content: Array<{
-        type: "text";
+        type: 'text';
         text: string;
     }>;
     details: unknown;
@@ -40,12 +40,12 @@ export interface ToolContext {
  * 获取飞书客户端的标准模式
  *
  * 这是所有工具通用的逻辑：
- * 1. 优先使用 TraceContext 中的 accountId 动态解析账号
- * 2. 如果没有 TraceContext，回退到 accountIndex 指定的账号
+ * 1. 优先使用 LarkTicket 中的 accountId 动态解析账号
+ * 2. 如果没有 LarkTicket，回退到 accountIndex 指定的账号
  * 3. 返回创建好的客户端实例
  *
  * @param config - OpenClaw 配置对象
- * @param accountIndex - 使用第几个账号（默认 0，即第一个），仅在无 TraceContext 时使用
+ * @param accountIndex - 使用第几个账号（默认 0，即第一个），仅在无 LarkTicket 时使用
  * @returns 飞书 SDK 客户端实例
  * @throws 如果没有启用的账号
  *
@@ -69,7 +69,7 @@ export declare function createClientGetter(config: ClawdbotConfig, accountIndex?
 /**
  * 获取当前请求对应的飞书账号信息
  *
- * 优先使用 TraceContext 中的 accountId，回退到第一个启用的账号。
+ * 优先使用 LarkTicket 中的 accountId，回退到第一个启用的账号。
  *
  * @param config - OpenClaw 配置对象
  * @returns 解析后的账号信息

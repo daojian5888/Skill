@@ -11,8 +11,8 @@
  * This module is a general-purpose message parsing utility — usable
  * from inbound handling, outbound formatting, and skills.
  */
-import type { ConvertContext, ConvertResult } from "./types.js";
-export type { ConvertContext, ConvertResult, ContentConverterFn } from "./types.js";
+import type { ApiMessageItem, ConvertContext, ConvertResult } from './types';
+export type { ApiMessageItem, ConvertContext, ConvertResult, ContentConverterFn } from './types';
 /** 从 mention 的 id 字段提取 open_id（兼容事件推送的对象格式和 API 响应的字符串格式） */
 export declare function extractMentionOpenId(id: unknown): string;
 /**
@@ -30,7 +30,7 @@ export declare function convertMessageContent(raw: string, messageType: string, 
  * item and maps it into the key→MentionInfo / openId→MentionInfo
  * structures the converter system expects.
  */
-export declare function buildConvertContextFromItem(item: any, fallbackMessageId: string, accountId?: string): ConvertContext;
+export declare function buildConvertContextFromItem(item: ApiMessageItem, fallbackMessageId: string, accountId?: string): ConvertContext;
 /**
  * Resolve mention placeholders in text.
  *

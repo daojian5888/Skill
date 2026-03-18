@@ -2,23 +2,24 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * Converter for "merge_forward" message type.
+ * Converter for "merge_forward" message type.
  *
-  * Unlike other converters this is async — it fetches sub-messages via
-  * the Feishu IM API and recursively expands nested merge_forward messages.
+ * Unlike other converters this is async — it fetches sub-messages via
+ * the Feishu IM API and recursively expands nested merge_forward messages.
  *
-  * The API returns ALL nested sub-messages in a single flat `items`
-  * array with `upper_message_id` pointing to the parent container.
-  * We build a tree from this flat list and recursively format it —
-  * only one API call is needed regardless of nesting depth.
+ * The API returns ALL nested sub-messages in a single flat `items`
+ * array with `upper_message_id` pointing to the parent container.
+ * We build a tree from this flat list and recursively format it —
+ * only one API call is needed regardless of nesting depth.
  *
-  * This module is a pure "data → format" converter: all API capabilities
-  * (`fetchSubMessages`, `batchResolveNames`, `resolveUserName`) are
-  * injected via callbacks in `ConvertContext`. Callers are responsible
-  * for creating the appropriate callbacks (UAT / TAT / event push).
+ * This module is a pure "data → format" converter: all API capabilities
+ * (`fetchSubMessages`, `batchResolveNames`, `resolveUserName`) are
+ * injected via callbacks in `ConvertContext`. Callers are responsible
+ * for creating the appropriate callbacks (UAT / TAT / event push).
  */
-import { convertMessageContent, buildConvertContextFromItem, } from "./content-converter.js";
-import { trace } from "../../core/trace.js";
+import { convertMessageContent, buildConvertContextFromItem } from './content-converter';
+import { larkLogger } from '../../core/lark-logger';
+const log = larkLogger('converters/merge-forward');
 /**
  * Recursively expand a merge_forward message.
  *
@@ -33,7 +34,7 @@ import { trace } from "../../core/trace.js";
 export const convertMergeForward = async (_raw, ctx) => {
     const { accountId, messageId, resolveUserName, batchResolveNames, fetchSubMessages } = ctx;
     if (!fetchSubMessages) {
-        return { content: "<forwarded_messages/>", resources: [] };
+        return { content: '<forwarded_messages/>', resources: [] };
     }
     const content = await expand(accountId, messageId, resolveUserName, batchResolveNames, fetchSubMessages);
     return { content, resources: [] };
@@ -48,24 +49,27 @@ async function expand(accountId, messageId, resolveUserName, batchResolveNames, 
         items = await fetchSubMessages(messageId);
     }
     catch (error) {
-        trace.error(`merge_forward: fetch failed (${messageId}): ${error instanceof Error ? error.message : String(error)}`);
-        return "<forwarded_messages/>";
+        log.error('fetch sub-messages failed', {
+            messageId,
+            error: error instanceof Error ? error.message : String(error),
+        });
+        return '<forwarded_messages/>';
     }
     if (items.length === 0) {
-        return "<forwarded_messages/>";
+        return '<forwarded_messages/>';
     }
     // --- Phase 2: Build children map ---
     const childrenMap = buildChildrenMap(items, messageId);
     // --- Phase 2.5: Batch resolve sender names (via callback) ---
-    if (accountId) {
-        const senderIds = collectSenderIds(items, messageId);
-        if (senderIds.length > 0 && batchResolveNames) {
-            try {
-                await batchResolveNames(senderIds);
-            }
-            catch {
-                // best-effort
-            }
+    const senderIds = collectSenderIds(items, messageId);
+    if (senderIds.length > 0 && batchResolveNames) {
+        try {
+            await batchResolveNames(senderIds);
+        }
+        catch (err) {
+            log.debug('batchResolveNames failed (best-effort)', {
+                error: err instanceof Error ? err.message : String(err),
+            });
         }
     }
     // --- Phase 3: Format tree recursively ---
@@ -101,8 +105,8 @@ function buildChildrenMap(items, rootMessageId) {
     // Sort each group by create_time ascending
     for (const children of map.values()) {
         children.sort((a, b) => {
-            const ta = parseInt(String(a.create_time ?? "0"), 10);
-            const tb = parseInt(String(b.create_time ?? "0"), 10);
+            const ta = parseInt(String(a.create_time ?? '0'), 10);
+            const tb = parseInt(String(b.create_time ?? '0'), 10);
             return ta - tb;
         });
     }
@@ -121,7 +125,7 @@ function collectSenderIds(items, rootMessageId) {
         if (item.message_id === rootMessageId && !item.upper_message_id) {
             continue;
         }
-        if (item.sender?.sender_type === "user") {
+        if (item.sender?.sender_type === 'user') {
             const senderId = item.sender.id;
             if (senderId) {
                 ids.add(senderId);
@@ -143,27 +147,25 @@ function collectSenderIds(items, rootMessageId) {
 async function formatSubTree(parentId, childrenMap, accountId, resolveUserName) {
     const children = childrenMap.get(parentId);
     if (!children || children.length === 0) {
-        return "<forwarded_messages/>";
+        return '<forwarded_messages/>';
     }
     const parts = [];
     for (const item of children) {
         try {
-            const msgType = item.msg_type ?? "text";
-            const senderId = item.sender?.id ?? "unknown";
-            const createTime = item.create_time
-                ? parseInt(String(item.create_time), 10)
-                : undefined;
-            const timestamp = createTime ? formatTimestamp(createTime) : "unknown";
-            const rawContent = item.body?.content ?? "{}";
+            const msgType = item.msg_type ?? 'text';
+            const senderId = item.sender?.id ?? 'unknown';
+            const createTime = item.create_time ? parseInt(String(item.create_time), 10) : undefined;
+            const timestamp = createTime ? formatTimestamp(createTime) : 'unknown';
+            const rawContent = item.body?.content ?? '{}';
             let content;
-            if (msgType === "merge_forward") {
+            if (msgType === 'merge_forward') {
                 // Recurse into nested merge_forward via the tree — no API call
                 const nestedId = item.message_id;
                 if (nestedId) {
                     content = await formatSubTree(nestedId, childrenMap, accountId, resolveUserName);
                 }
                 else {
-                    content = "<forwarded_messages/>";
+                    content = '<forwarded_messages/>';
                 }
             }
             else {
@@ -179,18 +181,21 @@ async function formatSubTree(parentId, childrenMap, accountId, resolveUserName) 
                 content = (await convertMessageContent(rawContent, msgType, subCtx)).content;
             }
             const displayName = resolveUserName?.(senderId) ?? senderId;
-            const msgId = item.message_id ?? "";
-            const indented = indentLines(content, "    ");
-            parts.push(`[${timestamp}] ${displayName} (${msgId}):\n${indented}`);
+            const indented = indentLines(content, '    ');
+            parts.push(`[${timestamp}] ${displayName}:\n${indented}`);
         }
         catch (err) {
-            trace.warn(`merge_forward: failed to convert sub-message ${item.message_id}(${item.msg_type ?? "unknown"}): ${err instanceof Error ? err.message : String(err)}`);
+            log.warn('failed to convert sub-message', {
+                messageId: item.message_id,
+                msgType: item.msg_type ?? 'unknown',
+                error: err instanceof Error ? err.message : String(err),
+            });
         }
     }
     if (parts.length === 0) {
-        return "<forwarded_messages/>";
+        return '<forwarded_messages/>';
     }
-    return `<forwarded_messages>\n${parts.join("\n")}\n</forwarded_messages>`;
+    return `<forwarded_messages>\n${parts.join('\n')}\n</forwarded_messages>`;
 }
 // ---------------------------------------------------------------------------
 // Helpers
@@ -204,18 +209,18 @@ function formatTimestamp(ms) {
     const utcMs = date.getTime() + date.getTimezoneOffset() * 60_000;
     const bjDate = new Date(utcMs + 8 * 3600_000);
     const y = bjDate.getFullYear();
-    const mo = String(bjDate.getMonth() + 1).padStart(2, "0");
-    const d = String(bjDate.getDate()).padStart(2, "0");
-    const h = String(bjDate.getHours()).padStart(2, "0");
-    const mi = String(bjDate.getMinutes()).padStart(2, "0");
-    const s = String(bjDate.getSeconds()).padStart(2, "0");
+    const mo = String(bjDate.getMonth() + 1).padStart(2, '0');
+    const d = String(bjDate.getDate()).padStart(2, '0');
+    const h = String(bjDate.getHours()).padStart(2, '0');
+    const mi = String(bjDate.getMinutes()).padStart(2, '0');
+    const s = String(bjDate.getSeconds()).padStart(2, '0');
     return `${y}-${mo}-${d}T${h}:${mi}:${s}+08:00`;
 }
 /** Add a prefix indent to every line of text. */
 function indentLines(text, indent) {
     return text
-        .split("\n")
+        .split('\n')
         .map((line) => `${indent}${line}`)
-        .join("\n");
+        .join('\n');
 }
 //# sourceMappingURL=merge-forward.js.map

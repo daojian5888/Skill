@@ -6,9 +6,9 @@
  *
  * 从 package.json 读取版本号并生成 User-Agent 字符串。
  */
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import { readFileSync } from "node:fs";
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
 /** 缓存的版本号 */
 let cachedVersion;
 /**
@@ -23,14 +23,14 @@ export function getPluginVersion() {
         // 当前文件: src/core/version.ts → 向上两级到达项目根目录
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = dirname(__filename);
-        const packageJsonPath = join(__dirname, "..", "..", "package.json");
-        const raw = readFileSync(packageJsonPath, "utf8");
+        const packageJsonPath = join(__dirname, '..', '..', 'package.json');
+        const raw = readFileSync(packageJsonPath, 'utf8');
         const pkg = JSON.parse(raw);
-        cachedVersion = pkg.version ?? "unknown";
+        cachedVersion = pkg.version ?? 'unknown';
         return cachedVersion;
     }
     catch {
-        cachedVersion = "unknown";
+        cachedVersion = 'unknown';
         return cachedVersion;
     }
 }

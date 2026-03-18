@@ -7,7 +7,7 @@
  * 直接复用 onboarding-auth.ts 的 triggerOnboarding() 函数。
  * 注意：此命令仅限应用 owner 执行（与 onboarding 逻辑一致）
  */
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { OpenClawConfig } from 'openclaw/plugin-sdk';
 /**
  * 执行飞书用户权限批量授权命令
  * 直接调用 triggerOnboarding()，包含 owner 检查

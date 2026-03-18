@@ -11,11 +11,11 @@
  * - `chat_mode`: "group" | "topic" | "p2p"
  * - `group_message_type`: "chat" | "thread" (only for chat_mode=group)
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-export type ChatInfo = {
-    chatMode: "group" | "topic" | "p2p";
-    groupMessageType?: "chat" | "thread";
-};
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+export interface ChatInfo {
+    chatMode: 'group' | 'topic' | 'p2p';
+    groupMessageType?: 'chat' | 'thread';
+}
 /** Clear chat-info caches (called from LarkClient.clearCache). */
 export declare function clearChatInfoCache(accountId?: string): void;
 /**
@@ -41,4 +41,18 @@ export declare function getChatInfo(params: {
     chatId: string;
     accountId?: string;
 }): Promise<ChatInfo | undefined>;
+/**
+ * Determine the chat type (p2p or group) for a given chat ID.
+ *
+ * Delegates to the shared {@link getChatInfo} cache (account-scoped LRU with
+ * 1-hour TTL) so that chat metadata is fetched at most once across all
+ * call-sites (dispatch, reaction handler, etc.).
+ *
+ * Falls back to "p2p" if the API call fails.
+ */
+export declare function getChatTypeFeishu(params: {
+    cfg: ClawdbotConfig;
+    chatId: string;
+    accountId?: string;
+}): Promise<'p2p' | 'group'>;
 //# sourceMappingURL=chat-info-cache.d.ts.map

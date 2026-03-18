@@ -21,12 +21,11 @@
  * at parse time in {@link parseMessageEvent}. Quoted merge_forward
  * messages are still expanded here via {@link resolveQuotedContent}.
  */
-import { PERMISSION_ERROR_COOLDOWN_MS, permissionErrorNotifiedAt } from "./permission.js";
-import { resolveSenderName } from "./sender.js";
-import { downloadResources, buildFeishuMediaPayload } from "./media-resolver.js";
-import { getMessageFeishu } from "../outbound/fetch.js";
-import { trace } from "../../core/trace.js";
-import { getUserNameCache, batchResolveUserNames, } from "./user-name-cache.js";
+import { PERMISSION_ERROR_COOLDOWN_MS, permissionErrorNotifiedAt } from './permission';
+import { resolveUserName } from './user-name-cache';
+import { downloadResources, buildFeishuMediaPayload } from './media-resolver';
+import { getMessageFeishu } from '../outbound/fetch';
+import { getUserNameCache, batchResolveUserNames } from './user-name-cache';
 // ---------------------------------------------------------------------------
 // Phase 1: Sender info (lightweight, before gate)
 // ---------------------------------------------------------------------------
@@ -41,27 +40,27 @@ export async function resolveSenderInfo(params) {
     let ctx = params.ctx;
     // Only resolve display name for real users — the contact API
     // does not return results for app/bot accounts.
-    if (ctx.rawSender?.sender_type !== "user") {
-        trace.info(`sender_type is "${ctx.rawSender?.sender_type}", skipping name resolution`);
+    if (ctx.rawSender?.sender_type !== 'user') {
+        log(`sender_type is "${ctx.rawSender?.sender_type}", skipping name resolution`);
         return { ctx };
     }
     // Resolve sender display name (best-effort)
-    const senderResult = await resolveSenderName({
+    const senderResult = await resolveUserName({
         account,
-        senderOpenId: ctx.senderId,
+        openId: ctx.senderId,
         log,
     });
     if (senderResult.name) {
         ctx = { ...ctx, senderName: senderResult.name };
-        trace.info(`sender resolved: ${senderResult.name}`);
+        log(`sender resolved: ${senderResult.name}`);
     }
     else if (senderResult.permissionError) {
-        trace.warn(`sender resolve failed: permission error code=${senderResult.permissionError.code}`);
+        log(`sender resolve failed: permission error code=${senderResult.permissionError.code}`);
     }
     // Track permission errors (with cooldown)
     let permissionError;
     if (senderResult.permissionError) {
-        const appKey = account.appId ?? "default";
+        const appKey = account.appId ?? 'default';
         const now = Date.now();
         const lastNotified = permissionErrorNotifiedAt.get(appKey) ?? 0;
         if (now - lastNotified > PERMISSION_ERROR_COOLDOWN_MS) {
@@ -116,11 +115,11 @@ export async function prefetchUserNames(params) {
  * for content substitution.
  */
 export async function resolveMedia(params) {
-    const { ctx, cfg, account, log } = params;
-    const feishuCfg = account.config;
-    const mediaMaxBytes = (feishuCfg?.mediaMaxMb ?? 30) * 1024 * 1024;
+    const { ctx, accountScopedCfg, account, log } = params;
+    const accountFeishuCfg = account.config;
+    const mediaMaxBytes = (accountFeishuCfg?.mediaMaxMb ?? 30) * 1024 * 1024;
     const mediaList = await downloadResources({
-        cfg,
+        cfg: accountScopedCfg,
         messageId: ctx.messageId,
         resources: ctx.resources,
         maxBytes: mediaMaxBytes,
@@ -128,7 +127,7 @@ export async function resolveMedia(params) {
         accountId: account.accountId,
     });
     if (mediaList.length > 0) {
-        trace.info(`media resolved: ${mediaList.length} attachment(s)`);
+        log(`media resolved: ${mediaList.length} attachment(s)`);
     }
     return {
         payload: buildFeishuMediaPayload(mediaList),
@@ -154,27 +153,27 @@ export function substituteMediaPaths(content, mediaList) {
     for (const media of mediaList) {
         const { fileKey, path, resourceType } = media;
         switch (resourceType) {
-            case "image":
+            case 'image':
                 // ![image](img_v3_xxx) → local path (SDK detects image extensions)
                 result = result.replace(`![image](${fileKey})`, path);
                 break;
-            case "sticker":
+            case 'sticker':
                 // <sticker key="xxx"/> → local path (treated like image)
                 result = result.replace(`<sticker key="${fileKey}"/>`, path);
                 break;
-            case "audio": {
+            case 'audio': {
                 // <audio key="xxx" .../> → [Audio: /path/to/audio.opus ...]
                 const audioRe = new RegExp(`<audio key="${escapeRegExp(fileKey)}"[^/]*/>`);
                 result = result.replace(audioRe, `[Audio: ${path}]`);
                 break;
             }
-            case "file": {
+            case 'file': {
                 // <file key="xxx" .../> → [File: /path/to/doc.pdf]
                 const fileRe = new RegExp(`<file key="${escapeRegExp(fileKey)}"[^/]*/>`);
                 result = result.replace(fileRe, `[File: ${path}]`);
                 break;
             }
-            case "video": {
+            case 'video': {
                 // <video key="xxx" .../> → [Video: /path/to/video.mp4]
                 const videoRe = new RegExp(`<video key="${escapeRegExp(fileKey)}"[^/]*/>`);
                 result = result.replace(videoRe, `[Video: ${path}]`);
@@ -185,7 +184,7 @@ export function substituteMediaPaths(content, mediaList) {
     return result;
 }
 function escapeRegExp(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 // ---------------------------------------------------------------------------
 // Phase 2b: Quoted / replied-to message (text context)
@@ -200,12 +199,12 @@ function escapeRegExp(s) {
  * the AI knows who originally wrote the quoted message.
  */
 export async function resolveQuotedContent(params) {
-    const { ctx, cfg, account, log } = params;
+    const { ctx, accountScopedCfg, account, log } = params;
     if (!ctx.parentId)
         return undefined;
     try {
         const quotedMsg = await getMessageFeishu({
-            cfg,
+            cfg: accountScopedCfg,
             messageId: ctx.parentId,
             accountId: account.accountId,
             expandForward: true,

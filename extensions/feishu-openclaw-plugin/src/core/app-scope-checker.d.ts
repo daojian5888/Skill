@@ -10,17 +10,24 @@
  * 结果带 30 秒内存缓存，避免每次 invoke() 都调远程 API。
  * scope 检查失败后可调 {@link invalidateAppScopeCache} 清缓存重查。
  */
-import type * as Lark from "@larksuiteoapi/node-sdk";
-export type AppInfo = {
+import type * as Lark from '@larksuiteoapi/node-sdk';
+export interface AppInfo {
     appId: string;
     creatorId?: string;
     ownerOpenId?: string;
     ownerType?: number;
+    /**
+     * 统一的 owner 判定结果。所有需要判定"谁是应用 owner"的场景都应使用此字段。
+     *
+     * 规则：owner_type=2（企业内成员）时取 owner_id，否则回退 creator_id。
+     * 兼容 owner.owner_type 和 owner.type 两种字段名。
+     */
+    effectiveOwnerOpenId?: string;
     scopes: Array<{
         scope: string;
         token_types?: string[];
     }>;
-};
+}
 /** 清除指定 appId 的缓存。 */
 export declare function invalidateAppScopeCache(appId: string): void;
 /**
@@ -34,7 +41,7 @@ export declare function invalidateAppScopeCache(appId: string): void;
  * @param tokenType - token 类型，用于过滤只支持特定 token 类型的 scope
  * @returns scope 字符串数组，如 `["calendar:calendar", "task:task:write"]`
  */
-export declare function getAppGrantedScopes(sdk: Lark.Client, appId: string, tokenType?: "user" | "tenant"): Promise<string[]>;
+export declare function getAppGrantedScopes(sdk: Lark.Client, appId: string, tokenType?: 'user' | 'tenant'): Promise<string[]>;
 /**
  * 获取应用信息，包括 owner 信息。
  *
@@ -77,5 +84,5 @@ export declare function missingScopes(appGranted: string[], apiRequired: string[
  * @param requiredScopes - 需要的 scope 列表
  * @param scopeNeedType  - "all" 表示全部必须，undefined/"one" 表示任一即可
  */
-export declare function isAppScopeSatisfied(appScopes: string[], requiredScopes: string[], scopeNeedType?: "one" | "all"): boolean;
+export declare function isAppScopeSatisfied(appScopes: string[], requiredScopes: string[], scopeNeedType?: 'one' | 'all'): boolean;
 //# sourceMappingURL=app-scope-checker.d.ts.map

@@ -2,22 +2,22 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * OAPI 工具专用辅助函数
+ * OAPI 工具专用辅助函数
  *
-  * 提供 OAPI 工具特有的功能（如时间转换），并复用通用辅助函数。
+ * 提供 OAPI 工具特有的功能（如时间转换），并复用通用辅助函数。
  */
 // ---------------------------------------------------------------------------
 // 通用功能（从 tools/helpers.ts 导入）
 // ---------------------------------------------------------------------------
-export { formatToolResult, formatToolError, createToolLogger, createClientGetter, createToolContext, getFirstAccount, validateRequiredParams, validateEnum, } from "../helpers.js";
+export { formatToolResult, formatToolError, createToolLogger, createClientGetter, createToolContext, getFirstAccount, validateRequiredParams, validateEnum, } from '../helpers';
 // ---------------------------------------------------------------------------
 // ToolClient（工具层统一客户端）
 // ---------------------------------------------------------------------------
-export { ToolClient, createToolClient, NeedAuthorizationError, AppScopeMissingError, UserAuthRequiredError, UserScopeInsufficientError, } from "../../core/tool-client.js";
+export { ToolClient, createToolClient, NeedAuthorizationError, AppScopeMissingError, UserAuthRequiredError, UserScopeInsufficientError, } from '../../core/tool-client';
 // ---------------------------------------------------------------------------
 // OAPI 专用：客户端便捷创建
 // ---------------------------------------------------------------------------
-import { createClientGetter } from "../helpers.js";
+import { createClientGetter } from '../helpers';
 /**
  * 从配置直接创建飞书客户端（OAPI 工具常用模式）
  *
@@ -48,7 +48,7 @@ export function createFeishuClientFromConfig(config) {
 // ---------------------------------------------------------------------------
 // OAPI 专用：返回值格式化（简化版）
 // ---------------------------------------------------------------------------
-import { formatToolResult } from "../helpers.js";
+import { formatToolResult } from '../helpers';
 /**
  * 格式化返回值为 JSON（OAPI 工具常用简化接口）
  *
@@ -104,7 +104,7 @@ export function parseTimeToTimestamp(input) {
         }
         // 没有时区信息，当作北京时间处理
         // 支持格式：YYYY-MM-DD HH:mm 或 YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DDTHH:mm:ss
-        const normalized = trimmed.replace("T", " ");
+        const normalized = trimmed.replace('T', ' ');
         const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
         if (!match) {
             // 尝试直接解析（可能是其他 ISO 8601 格式）
@@ -116,7 +116,7 @@ export function parseTimeToTimestamp(input) {
         const [, year, month, day, hour, minute, second] = match;
         // 当作北京时间（UTC+8），转换为 UTC
         const utcDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour) - 8, // 北京时间减去 8 小时得到 UTC
-        parseInt(minute), parseInt(second ?? "0")));
+        parseInt(minute), parseInt(second ?? '0')));
         return Math.floor(utcDate.getTime() / 1000).toString();
     }
     catch {
@@ -158,7 +158,7 @@ export function parseTimeToTimestampMs(input) {
         }
         // 没有时区信息，当作北京时间处理
         // 支持格式：YYYY-MM-DD HH:mm 或 YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DDTHH:mm:ss
-        const normalized = trimmed.replace("T", " ");
+        const normalized = trimmed.replace('T', ' ');
         const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
         if (!match) {
             // 尝试直接解析（可能是其他 ISO 8601 格式）
@@ -170,7 +170,7 @@ export function parseTimeToTimestampMs(input) {
         const [, year, month, day, hour, minute, second] = match;
         // 当作北京时间（UTC+8），转换为 UTC
         const utcDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour) - 8, // 北京时间减去 8 小时得到 UTC
-        parseInt(minute), parseInt(second ?? "0")));
+        parseInt(minute), parseInt(second ?? '0')));
         return utcDate.getTime().toString();
     }
     catch {
@@ -211,7 +211,7 @@ export function parseTimeToRFC3339(input) {
         }
         // 没有时区信息，当作北京时间处理，转换为 RFC 3339 格式
         // 支持格式：YYYY-MM-DD HH:mm 或 YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DDTHH:mm:ss
-        const normalized = trimmed.replace("T", " ");
+        const normalized = trimmed.replace('T', ' ');
         const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
         if (!match) {
             // 尝试直接解析（可能是其他 ISO 8601 格式）
@@ -219,66 +219,16 @@ export function parseTimeToRFC3339(input) {
             if (isNaN(date.getTime()))
                 return null;
             // 如果能解析但没有时区，添加 +08:00
-            return trimmed.includes("T") ? `${trimmed}+08:00` : trimmed;
+            return trimmed.includes('T') ? `${trimmed}+08:00` : trimmed;
         }
         const [, year, month, day, hour, minute, second] = match;
-        const sec = second ?? "00";
+        const sec = second ?? '00';
         // 直接构造 RFC 3339 格式（北京时间 UTC+8）
         return `${year}-${month}-${day}T${hour}:${minute}:${sec}+08:00`;
     }
     catch {
         return null;
     }
-}
-/**
- * 将时间戳（秒）转换为北京时间字符串
- *
- * @param timestamp - Unix 时间戳（秒），可以是字符串或数字
- * @returns 北京时间字符串，格式：'YYYY-MM-DD HH:mm:ss'
- *
- * @example
- * ```typescript
- * formatTimestampToBeijingTime(1740459000)     // => "2026-02-25 14:30:00"
- * formatTimestampToBeijingTime("1740459000")   // => "2026-02-25 14:30:00"
- * ```
- */
-export function formatTimestampToBeijingTime(timestamp) {
-    const ts = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
-    const date = new Date(ts * 1000); // 秒转毫秒
-    // UTC 时间加上 8 小时得到北京时间
-    const beijingTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-    const year = beijingTime.getUTCFullYear();
-    const month = String(beijingTime.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(beijingTime.getUTCDate()).padStart(2, '0');
-    const hour = String(beijingTime.getUTCHours()).padStart(2, '0');
-    const minute = String(beijingTime.getUTCMinutes()).padStart(2, '0');
-    const second = String(beijingTime.getUTCSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-}
-/**
- * 将时间戳（毫秒）转换为北京时间字符串
- *
- * @param timestamp - Unix 时间戳（毫秒），可以是字符串或数字
- * @returns 北京时间字符串，格式：'YYYY-MM-DD HH:mm:ss'
- *
- * @example
- * ```typescript
- * formatTimestampMsToBeijingTime(1740459000000)   // => "2026-02-25 14:30:00"
- * formatTimestampMsToBeijingTime("1740459000000") // => "2026-02-25 14:30:00"
- * ```
- */
-export function formatTimestampMsToBeijingTime(timestamp) {
-    const ts = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
-    const date = new Date(ts); // 毫秒直接使用
-    // UTC 时间加上 8 小时得到北京时间
-    const beijingTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-    const year = beijingTime.getUTCFullYear();
-    const month = String(beijingTime.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(beijingTime.getUTCDate()).padStart(2, '0');
-    const hour = String(beijingTime.getUTCHours()).padStart(2, '0');
-    const minute = String(beijingTime.getUTCMinutes()).padStart(2, '0');
-    const second = String(beijingTime.getUTCSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 /**
  * 转换时间范围对象（用于 search 等 API）
@@ -307,18 +257,55 @@ export function convertTimeRange(timeRange, unit = 's') {
     if (timeRange.start) {
         const ts = parseFn(timeRange.start);
         if (!ts) {
-            throw new Error(`时间格式错误！start 必须使用 ISO 8601 / RFC 3339 格式（包含时区），例如 "2024-01-01T00:00:00+08:00"，收到: ${timeRange.start}`);
+            throw new Error(`Invalid time format for start. Must use ISO 8601 / RFC 3339 with timezone, e.g. "2024-01-01T00:00:00+08:00". Received: ${timeRange.start}`);
         }
         result.start = parseInt(ts, 10);
     }
     if (timeRange.end) {
         const ts = parseFn(timeRange.end);
         if (!ts) {
-            throw new Error(`时间格式错误！end 必须使用 ISO 8601 / RFC 3339 格式（包含时区），例如 "2024-01-01T00:00:00+08:00"，收到: ${timeRange.end}`);
+            throw new Error(`Invalid time format for end. Must use ISO 8601 / RFC 3339 with timezone, e.g. "2024-01-01T00:00:00+08:00". Received: ${timeRange.end}`);
         }
         result.end = parseInt(ts, 10);
     }
     return Object.keys(result).length > 0 ? result : undefined;
+}
+// ---------------------------------------------------------------------------
+// OAPI 专用：Unix 时间戳 → ISO 8601 (上海时区)
+// ---------------------------------------------------------------------------
+export const SHANGHAI_UTC_OFFSET_HOURS = 8;
+export const SHANGHAI_OFFSET_SUFFIX = '+08:00';
+export function pad2(value) {
+    return String(value).padStart(2, '0');
+}
+/**
+ * Convert a Unix timestamp (seconds or milliseconds) to ISO 8601 string
+ * in the Asia/Shanghai timezone.
+ *
+ * Auto-detects seconds vs milliseconds based on magnitude.
+ *
+ * @returns e.g. `"2026-02-25T14:30:00+08:00"`, or `null` on invalid input
+ */
+export function unixTimestampToISO8601(raw) {
+    if (raw === undefined || raw === null)
+        return null;
+    const text = typeof raw === 'number' ? String(raw) : String(raw).trim();
+    if (!/^-?\d+$/.test(text))
+        return null;
+    const num = Number(text);
+    if (!Number.isFinite(num))
+        return null;
+    const utcMs = Math.abs(num) >= 1e12 ? num : num * 1000;
+    const beijingDate = new Date(utcMs + SHANGHAI_UTC_OFFSET_HOURS * 60 * 60 * 1000);
+    if (Number.isNaN(beijingDate.getTime()))
+        return null;
+    const year = beijingDate.getUTCFullYear();
+    const month = pad2(beijingDate.getUTCMonth() + 1);
+    const day = pad2(beijingDate.getUTCDate());
+    const hour = pad2(beijingDate.getUTCHours());
+    const minute = pad2(beijingDate.getUTCMinutes());
+    const second = pad2(beijingDate.getUTCSeconds());
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}${SHANGHAI_OFFSET_SUFFIX}`;
 }
 // ---------------------------------------------------------------------------
 // OAPI 专用：飞书 API 错误处理
@@ -328,117 +315,19 @@ export function convertTimeRange(timeRange, unit = 's') {
  *
  * 这些函数专门用于处理飞书 Open API 的响应和错误。
  */
-export { assertLarkOk, formatLarkError } from "../../core/api-error.js";
+export { assertLarkOk, formatLarkError } from '../../core/api-error';
 // ---------------------------------------------------------------------------
-// OAPI 专用：invoke() 统一错误处理
+// OAPI 专用：invoke() 错误判断
 // ---------------------------------------------------------------------------
-import { AppScopeMissingError, UserAuthRequiredError, UserScopeInsufficientError, } from "../../core/tool-client.js";
+import { AppScopeMissingError, UserAuthRequiredError, UserScopeInsufficientError } from '../../core/tool-client';
 /**
- * 统一处理 `client.invoke()` 抛出的错误，返回工具结果。
+ * Check whether an error is a structured invoke-level auth/permission error.
  *
- * 替换 5 个工具文件中重复的 catch 块，将结构化错误转换为
- * AI 可理解的 JSON 响应。
+ * Useful in intermediate catch blocks that need to let auth errors bubble up
+ * to the outer `handleInvokeErrorWithAutoAuth`.
  *
- * @param err - invoke() 或其他逻辑抛出的错误
- * @returns 格式化的工具返回值
- *
- * @example
- * ```typescript
- * try {
- *   const res = await client.invoke("feishu_calendar_event.create", ...);
- *   return json({ event: res.data });
- * } catch (err) {
- *   return handleInvokeError(err);
- * }
- * ```
- */
-// export function handleInvokeError(err: unknown) {
-//   // 优先判断：应用缺少 application:application:self_manage 权限
-//   if (err instanceof AppScopeCheckFailedError) {
-//     const link = err.appId
-//       ? `https://open.feishu.cn/app/${err.appId}/auth?q=application:application:self_manage&op_from=feishu-openclaw&token_type=tenant`
-//       : "";
-//     return json({
-//       error: "app_scope_check_failed",
-//       message:
-//         `应用缺少核心权限 application:application:self_manage，无法正常检查权限配置。` +
-//         `请联系应用管理员在飞书开放平台「权限管理」中开通此权限。` +
-//         (link ? `\n权限管理链接：${link}` : ""),
-//     });
-//   }
-//
-//   if (err instanceof AppScopeMissingError) {
-//     const link = err.appId
-//       ? `https://open.feishu.cn/app/${err.appId}/auth?q=${encodeURIComponent(err.missingScopes.join(","))}&op_from=feishu-openclaw&token_type=user`
-//       : "";
-//     return json({
-//       error: "app_scope_missing",
-//       api: err.apiName,
-//       missing_scopes: err.missingScopes,
-//       message:
-//         `应用缺少权限：${err.missingScopes.join(", ")}。` +
-//         `请联系应用管理员在飞书开放平台「权限管理」中开通这些权限。` +
-//         (link ? `\n权限管理链接：${link}` : ""),
-//     });
-//   }
-//
-//   if (err instanceof UserAuthRequiredError) {
-//     // 当 app scope 检查失败时，scope 信息不可靠
-//     if (!err.appScopeVerified) {
-//       const link = err.appId
-//         ? `https://open.feishu.cn/app/${err.appId}/auth?q=application:application:self_manage&op_from=feishu-openclaw&token_type=tenant`
-//         : "";
-//       return json({
-//         error: "app_scope_check_failed",
-//         api: err.apiName,
-//         message:
-//           `无法完成用户授权：应用可能缺少 application:application:self_manage 权限，` +
-//           `无法正确检查权限配置。请联系应用管理员处理。` +
-//           (link ? `\n权限管理链接：${link}` : ""),
-//       });
-//     }
-//
-//     return json({
-//       error: "need_user_authorization",
-//       api: err.apiName,
-//       required_scope: err.requiredScopes.join(" "),
-//       user_open_id: err.userOpenId,
-//       message: "操作需要用户授权，自动授权流程未能启动，请稍后重试。",
-//     });
-//   }
-//
-//   if (err instanceof UserScopeInsufficientError) {
-//     return json({
-//       error: "user_scope_insufficient",
-//       api: err.apiName,
-//       missing_scopes: err.missingScopes,
-//       user_open_id: err.userOpenId,
-//       message: `用户已授权但缺少权限 [${err.missingScopes.join(" ")}]，自动授权流程未能启动，请稍后重试。`,
-//     });
-//   }
-//
-//   // 兼容旧的 NeedAuthorizationError
-//   if (err instanceof NeedAuthorizationError) {
-//     return json({
-//       error: "need_user_authorization",
-//       user_open_id: err.userOpenId,
-//       message: "操作需要用户授权，自动授权流程未能启动，请稍后重试。",
-//     });
-//   }
-//
-//   // 兜底：飞书 API 错误 / 其他异常
-//   return json({
-//     error: formatLarkError(err),
-//   });
-// }
-/**
- * 判断错误是否为 invoke() 层级的结构化错误（授权/权限相关）。
- *
- * 适用于中间 catch 块需要让授权错误继续冒泡到外层
- * `handleInvokeError` 的场景（如 `resolveCalendarId`）。
- *
- * 对于"允许失败"的子操作，优先使用 `client.tryInvoke()` 代替手动
- * `isInvokeError` + throw 模式。
+ * For "allow-to-fail" sub-operations, prefer `client.tryInvoke()` over
+ * manual `isInvokeError` + throw.
  */
 export function isInvokeError(err) {
     return (err instanceof UserAuthRequiredError ||
@@ -448,5 +337,5 @@ export function isInvokeError(err) {
 // ---------------------------------------------------------------------------
 // 自动授权：handleInvokeErrorWithAutoAuth
 // ---------------------------------------------------------------------------
-export { handleInvokeErrorWithAutoAuth } from "../auto-auth.js";
+export { handleInvokeErrorWithAutoAuth } from '../auto-auth';
 //# sourceMappingURL=helpers.js.map

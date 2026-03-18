@@ -9,8 +9,8 @@
  * - Derive helpers: `mentionedBot()`, `nonBotMentions()`
  * - Format helpers for outbound text and card messages.
  */
-import type { MentionInfo, MessageContext } from "../types.js";
-export type { MentionInfo } from "../types.js";
+import type { MentionInfo, MessageContext } from '../types';
+export type { MentionInfo } from '../types';
 /** Whether the bot was @-mentioned. */
 export declare function mentionedBot(ctx: MessageContext): boolean;
 /** All non-bot mentions. */

@@ -2,32 +2,32 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * MCP Doc 工具集
-  * 统一导出所有 doc 相关工具的注册函数
+ * MCP Doc 工具集
+ * 统一导出所有 doc 相关工具的注册函数
  */
-import { getEnabledLarkAccounts } from "../../../core/accounts.js";
-import { resolveToolsConfig } from "../../../core/tools-config.js";
-import { extractMcpUrlFromConfig, setMcpEndpointOverride } from "../shared.js";
-import { registerFetchDocTool } from "./fetch.js";
-import { registerCreateDocTool } from "./create.js";
-import { registerUpdateDocTool } from "./update.js";
+import { getEnabledLarkAccounts } from '../../../core/accounts';
+import { resolveAnyEnabledToolsConfig } from '../../../core/tools-config';
+import { extractMcpUrlFromConfig, setMcpEndpointOverride } from '../shared';
+import { registerFetchDocTool } from './fetch';
+import { registerCreateDocTool } from './create';
+import { registerUpdateDocTool } from './update';
 /**
  * 注册 MCP Doc 工具（仅保留 create/fetch/update，search/list 已由 OAPI 替代）
  */
 export function registerFeishuMcpDocTools(api) {
     if (!api.config) {
-        api.logger.debug?.("feishu_doc: No config available, skipping");
+        api.logger.debug?.('feishu_doc: No config available, skipping');
         return;
     }
     const accounts = getEnabledLarkAccounts(api.config);
     if (accounts.length === 0) {
-        api.logger.debug?.("feishu_doc: No Feishu accounts configured, skipping");
+        api.logger.debug?.('feishu_doc: No Feishu accounts configured, skipping');
         return;
     }
-    // 沿用现有 doc 开关：若用户关闭 doc 工具，则 MCP doc 工具也不注册
-    const toolsCfg = resolveToolsConfig(accounts[0].config.tools);
+    // 沿用现有 doc 开关：若所有账户都关闭 doc 工具，则 MCP doc 工具也不注册
+    const toolsCfg = resolveAnyEnabledToolsConfig(accounts);
     if (!toolsCfg.doc) {
-        api.logger.debug?.("feishu_doc: doc tool disabled in config");
+        api.logger.debug?.('feishu_doc: doc tool disabled in all accounts');
         return;
     }
     // 将 mcp_url（若配置）缓存为全局 override，供后续工具调用使用
@@ -37,6 +37,6 @@ export function registerFeishuMcpDocTools(api) {
     registerFetchDocTool(api);
     registerCreateDocTool(api);
     registerUpdateDocTool(api);
-    api.logger.info?.("feishu_doc: Registered feishu_fetch_doc, feishu_create_doc, feishu_update_doc");
+    api.logger.info?.('feishu_doc: Registered feishu_fetch_doc, feishu_create_doc, feishu_update_doc');
 }
 //# sourceMappingURL=index.js.map

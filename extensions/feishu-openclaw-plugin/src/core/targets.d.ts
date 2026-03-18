@@ -12,7 +12,7 @@
  * This module provides helpers to detect, normalise, and format these IDs
  * for both internal routing and outbound Feishu API calls.
  */
-import type { FeishuIdType } from "./types.js";
+import type { FeishuIdType } from './types';
 /**
  * Detect the Feishu ID type from a raw identifier string.
  *
@@ -36,7 +36,12 @@ export declare function formatFeishuTarget(id: string, type?: FeishuIdType): str
  * Determine the `receive_id_type` query parameter for the Feishu send-message
  * API based on the target identifier.
  */
-export declare function resolveReceiveIdType(id: string): "chat_id" | "open_id" | "user_id";
+export declare function resolveReceiveIdType(id: string): 'chat_id' | 'open_id' | 'user_id';
+/**
+ * 规范化 message_id，去除合成后缀（如 `om_xxx:auth-complete` → `om_xxx`）。
+ */
+export declare function normalizeMessageId(messageId: string): string;
+export declare function normalizeMessageId(messageId: string | undefined): string | undefined;
 /**
  * Return `true` when a raw string looks like it could be a Feishu target
  * (either an OpenClaw-tagged form or a native prefix).

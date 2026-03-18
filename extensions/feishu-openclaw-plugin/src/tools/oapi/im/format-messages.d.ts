@@ -2,15 +2,16 @@
  * Copyright (c) 2026 ByteDance Ltd. and/or its affiliates
  * SPDX-License-Identifier: MIT
  *
-  * 消息格式化公共函数
+ * 消息格式化公共函数
  *
-  * 将飞书 IM API 返回的原始消息对象转换为 AI 可读的 JSON 格式。
-  * 由 feishu_im_user_get_messages 和 feishu_im_user_get_thread_messages 共享。
+ * 将飞书 IM API 返回的原始消息对象转换为 AI 可读的 JSON 格式。
+ * 由 feishu_im_user_get_messages 和 feishu_im_user_get_thread_messages 共享。
  *
-  * 所有 API 调用均通过 UAT（用户身份）进行。
+ * 所有 API 调用均通过 UAT（用户身份）进行。
  */
-import type { LarkAccount } from "../../../core/types.js";
-import type { ToolClient } from "../../../core/tool-client.js";
+import type { LarkAccount } from '../../../core/types';
+import type { ToolClient } from '../../../core/tool-client';
+import type { ApiMessageItem } from '../../../messaging/converters/types';
 export interface FormattedMessage {
     message_id: string;
     msg_type: string;
@@ -38,7 +39,7 @@ export interface FormattedMessage {
  * 使用 convertMessageContent 将 body.content 转为 AI 可读文本，
  * 并过滤掉 AI 不需要的字段（upper_message_id、tenant_key 等）。
  */
-export declare function formatMessageItem(item: any, accountId: string, nameResolver: (openId: string) => string | undefined, ctxOverrides?: Partial<import("../../../messaging/converters/types.js").ConvertContext>): Promise<FormattedMessage>;
+export declare function formatMessageItem(item: ApiMessageItem, accountId: string, nameResolver: (openId: string) => string | undefined, ctxOverrides?: Partial<import('../../../messaging/converters/types.js').ConvertContext>): Promise<FormattedMessage>;
 /**
  * 批量格式化消息列表（UAT 路径）。
  *
@@ -46,5 +47,5 @@ export declare function formatMessageItem(item: any, accountId: string, nameReso
  * 这样 formatMessageItem 中的 sender.name 和 converter 的
  * resolveUserName 都能从 UAT 缓存中读到名字。
  */
-export declare function formatMessageList(items: any[], account: LarkAccount, log: (...args: unknown[]) => void, client: ToolClient): Promise<FormattedMessage[]>;
+export declare function formatMessageList(items: ApiMessageItem[], account: LarkAccount, log: (...args: unknown[]) => void, client: ToolClient): Promise<FormattedMessage[]>;
 //# sourceMappingURL=format-messages.d.ts.map

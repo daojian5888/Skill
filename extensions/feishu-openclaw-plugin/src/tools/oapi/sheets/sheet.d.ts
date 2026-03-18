@@ -12,6 +12,6 @@
  *   - create 支持带表头和初始数据一步创建
  *   - info 一次返回表格信息 + 全部工作表列表
  */
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
 export declare function registerFeishuSheetTool(api: OpenClawPluginApi): void;
 //# sourceMappingURL=sheet.d.ts.map

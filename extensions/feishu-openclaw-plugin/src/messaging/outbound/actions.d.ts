@@ -12,6 +12,6 @@
  * reply and attachment delivery — matching the Telegram/Discord pattern
  * where a single action handles all outbound message types.
  */
-import type { ChannelMessageActionAdapter } from "openclaw/plugin-sdk";
+import type { ChannelMessageActionAdapter } from 'openclaw/plugin-sdk';
 export declare const feishuMessageActions: ChannelMessageActionAdapter;
 //# sourceMappingURL=actions.d.ts.map

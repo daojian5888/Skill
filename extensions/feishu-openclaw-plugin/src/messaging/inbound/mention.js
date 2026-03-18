@@ -9,7 +9,7 @@
  * - Derive helpers: `mentionedBot()`, `nonBotMentions()`
  * - Format helpers for outbound text and card messages.
  */
-import { escapeRegExp } from "../converters/utils.js";
+import { escapeRegExp } from '../converters/utils';
 // ---------------------------------------------------------------------------
 // Derive helpers (work on MentionInfo[])
 // ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ export function nonBotMentions(ctx) {
 export function extractMessageBody(text, allMentionKeys) {
     let result = text;
     for (const key of allMentionKeys) {
-        result = result.replace(new RegExp(escapeRegExp(key) + "\\s*", "g"), "");
+        result = result.replace(new RegExp(escapeRegExp(key) + '\\s*', 'g'), '');
     }
     return result.trim();
 }
@@ -69,14 +69,14 @@ export function formatMentionAllForCard() {
 export function buildMentionedMessage(targets, message) {
     if (targets.length === 0)
         return message;
-    const mentionTags = targets.map(formatMentionForText).join(" ");
+    const mentionTags = targets.map(formatMentionForText).join(' ');
     return `${mentionTags}\n${message}`;
 }
 /** Prepend @mention tags (card format) to card markdown content. */
 export function buildMentionedCardContent(targets, message) {
     if (targets.length === 0)
         return message;
-    const mentionTags = targets.map(formatMentionForCard).join(" ");
+    const mentionTags = targets.map(formatMentionForCard).join(' ');
     return `${mentionTags}\n${message}`;
 }
 //# sourceMappingURL=mention.js.map

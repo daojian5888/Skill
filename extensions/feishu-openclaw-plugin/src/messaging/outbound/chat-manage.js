@@ -7,7 +7,8 @@
  * Provides functions to update chat settings (name, avatar), manage
  * members (add, remove, list) using the IM Chat API.
  */
-import { LarkClient } from "../../core/lark-client.js";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { LarkClient } from '../../core/lark-client';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -15,7 +16,7 @@ import { LarkClient } from "../../core/lark-client.js";
 function assertLarkOk(res, context) {
     const code = res?.code;
     if (code !== undefined && code !== 0) {
-        const msg = res?.msg ?? "unknown error";
+        const msg = res?.msg ?? 'unknown error';
         throw new Error(`[feishu-chat-manage] ${context}: code=${code}, msg=${msg}`);
     }
 }
@@ -51,7 +52,7 @@ export async function addChatMembersFeishu(params) {
     const res = await client.im.v1.chatMembers.create({
         path: { chat_id: chatId },
         data: { id_list: memberIds },
-        params: { member_id_type: "open_id" },
+        params: { member_id_type: 'open_id' },
     });
     assertLarkOk(res, `addChatMembers for ${chatId}`);
 }
@@ -67,7 +68,7 @@ export async function removeChatMembersFeishu(params) {
     const res = await client.im.v1.chatMembers.delete({
         path: { chat_id: chatId },
         data: { id_list: memberIds },
-        params: { member_id_type: "open_id" },
+        params: { member_id_type: 'open_id' },
     });
     assertLarkOk(res, `removeChatMembers for ${chatId}`);
 }
@@ -87,7 +88,7 @@ export async function listChatMembersFeishu(params) {
     const response = await client.im.v1.chatMembers.get({
         path: { chat_id: chatId },
         params: {
-            member_id_type: "open_id",
+            member_id_type: 'open_id',
             page_size: 100,
             ...(pageToken ? { page_token: pageToken } : {}),
         },
@@ -98,9 +99,9 @@ export async function listChatMembersFeishu(params) {
     if (items && Array.isArray(items)) {
         for (const item of items) {
             members.push({
-                memberId: item.member_id ?? "",
-                name: item.name ?? "",
-                memberIdType: item.member_id_type ?? "open_id",
+                memberId: item.member_id ?? '',
+                name: item.name ?? '',
+                memberIdType: item.member_id_type ?? 'open_id',
             });
         }
     }

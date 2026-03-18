@@ -8,7 +8,7 @@
  * Each account may override any top-level Feishu config field;
  * unset fields fall back to the top-level defaults.
  */
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId, } from "openclaw/plugin-sdk";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from 'openclaw/plugin-sdk';
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -25,9 +25,28 @@ function baseConfig(section) {
     const { accounts: _ignored, ...rest } = section;
     return rest;
 }
+/**
+ * 合并 base config 与 account override。
+ *
+ * 当 account 将策略设为 "open" 时，剔除从 base 继承的限制性字段，
+ * 避免与 "open" 语义冲突。
+ */
+function mergeAccountConfig(base, override) {
+    const merged = { ...base, ...override };
+    if (override.groupPolicy === 'open') {
+        if (!('groups' in override))
+            merged.groups = undefined;
+        if (!('groupAllowFrom' in override))
+            merged.groupAllowFrom = undefined;
+    }
+    if (override.dmPolicy === 'open' && !('allowFrom' in override)) {
+        merged.allowFrom = ['*'];
+    }
+    return merged;
+}
 /** Coerce a domain string to `LarkBrand`, defaulting to `"feishu"`. */
 function toBrand(domain) {
-    return domain ?? "feishu";
+    return domain ?? 'feishu';
 }
 // ---------------------------------------------------------------------------
 // Public API
@@ -45,7 +64,18 @@ export function getLarkAccountIds(cfg) {
     if (!accountMap || Object.keys(accountMap).length === 0) {
         return [DEFAULT_ACCOUNT_ID];
     }
-    return Object.keys(accountMap);
+    const accountIds = Object.keys(accountMap);
+    // 当 accounts 存在时，如果顶层也配置了 appId/appSecret（即默认机器人），
+    // 将 DEFAULT_ACCOUNT_ID 加入列表，确保顶层机器人不会被忽略。
+    // 但如果 accountMap 已经包含 default，则不重复添加。
+    const hasDefault = accountIds.some((id) => id.trim().toLowerCase() === DEFAULT_ACCOUNT_ID);
+    if (!hasDefault) {
+        const base = baseConfig(section);
+        if (base.appId && base.appSecret) {
+            return [DEFAULT_ACCOUNT_ID, ...accountIds];
+        }
+    }
+    return accountIds;
 }
 /** Return the first (default) account ID. */
 export function getDefaultLarkAccountId(cfg) {
@@ -58,16 +88,14 @@ export function getDefaultLarkAccountId(cfg) {
  * Falls back to the default account when `accountId` is omitted or `null`.
  */
 export function getLarkAccount(cfg, accountId) {
-    const requestedId = accountId
-        ? normalizeAccountId(accountId) ?? DEFAULT_ACCOUNT_ID
-        : DEFAULT_ACCOUNT_ID;
+    const requestedId = accountId ? (normalizeAccountId(accountId) ?? DEFAULT_ACCOUNT_ID) : DEFAULT_ACCOUNT_ID;
     const section = getLarkConfig(cfg);
     if (!section) {
         return {
             accountId: requestedId,
             enabled: false,
             configured: false,
-            brand: "feishu",
+            brand: 'feishu',
             config: {},
         };
     }
@@ -77,18 +105,14 @@ export function getLarkAccount(cfg, accountId) {
         ? accountMap[requestedId]
         : undefined;
     const merged = accountOverride
-        ? { ...base, ...accountOverride }
+        ? mergeAccountConfig(base, accountOverride)
         : { ...base };
     const appId = merged.appId;
     const appSecret = merged.appSecret;
     const configured = !!(appId && appSecret);
     // Respect explicit `enabled` when set; otherwise derive from `configured`.
     const enabled = !!(merged.enabled ?? configured);
-    // extra.domain 存在时，覆写 brand 为 https://open.{extra.domain}
-    const extra = merged.extra;
-    const brand = extra?.domain
-        ? `https://open.${extra.domain}`
-        : toBrand(merged.domain);
+    const brand = toBrand(merged.domain);
     if (configured) {
         return {
             accountId: requestedId,
@@ -101,7 +125,6 @@ export function getLarkAccount(cfg, accountId) {
             verificationToken: merged.verificationToken ?? undefined,
             brand,
             config: merged,
-            extra: extra ?? undefined,
         };
     }
     return {
@@ -115,7 +138,6 @@ export function getLarkAccount(cfg, accountId) {
         verificationToken: merged.verificationToken ?? undefined,
         brand,
         config: merged,
-        extra: extra ?? undefined,
     };
 }
 /** Return all accounts that are both configured and enabled. */

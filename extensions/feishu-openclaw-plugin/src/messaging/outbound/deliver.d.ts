@@ -5,8 +5,8 @@
  * {@link sendMessageFeishu} from `send.ts`. The outbound adapter delegates
  * to these for its `sendText` and `sendMedia` implementations.
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { FeishuSendResult } from "../types.js";
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { FeishuSendResult } from '../types';
 /**
  * Parameters for sending a text message via Feishu.
  */

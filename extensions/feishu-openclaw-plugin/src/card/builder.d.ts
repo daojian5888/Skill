@@ -16,7 +16,7 @@ export declare const STREAMING_ELEMENT_ID = "streaming_content";
 export declare const REASONING_ELEMENT_ID = "reasoning_content";
 export interface ToolCallInfo {
     name: string;
-    status: "running" | "complete" | "error";
+    status: 'running' | 'complete' | 'error';
     args?: Record<string, unknown>;
     result?: string;
 }
@@ -34,14 +34,14 @@ export interface FeishuCard {
     };
     header?: {
         title: {
-            tag: "plain_text";
+            tag: 'plain_text';
             content: string;
         };
         template: string;
     };
     elements: CardElement[];
 }
-export type CardState = "thinking" | "streaming" | "complete" | "confirm";
+export type CardState = 'thinking' | 'streaming' | 'complete' | 'confirm';
 export interface ConfirmData {
     operationDescription: string;
     pendingOperationId: string;

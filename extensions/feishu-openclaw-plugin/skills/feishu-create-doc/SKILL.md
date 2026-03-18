@@ -13,7 +13,7 @@ description: |
 工具成功执行后，返回一个 JSON 对象，包含以下字段：
 
 - **`doc_id`**（string）：文档的唯一标识符（token），格式如 `doxcnXXXXXXXXXXXXXXXXXXX`
-- **`doc_url`**（string）：文档的访问链接，可直接在浏览器中打开，格式如 `https://bytedance.feishu.cn/docx/doxcnXXXXXXXXXXXXXXXXXXX`
+- **`doc_url`**（string）：文档的访问链接，可直接在浏览器中打开，格式如 `https://www.feishu.cn/docx/doxcnXXXXXXXXXXXXXXXXXXX`
 - **`message`**（string）：操作结果消息，如"文档创建成功"
 
 

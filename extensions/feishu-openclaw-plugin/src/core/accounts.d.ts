@@ -8,8 +8,8 @@
  * Each account may override any top-level Feishu config field;
  * unset fields fall back to the top-level defaults.
  */
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { FeishuConfig, LarkAccount, LarkCredentials, ConfiguredLarkAccount } from "./types.js";
+import type { ClawdbotConfig } from 'openclaw/plugin-sdk';
+import type { FeishuConfig, LarkAccount, LarkCredentials, ConfiguredLarkAccount } from './types';
 /**
  * List all account IDs defined in the Lark config.
  *

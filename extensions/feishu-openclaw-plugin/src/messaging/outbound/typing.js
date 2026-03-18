@@ -13,22 +13,11 @@
  * This provides a lightweight visual cue that the bot has acknowledged
  * the message and is working on a reply.
  */
-import { LarkClient } from "../../core/lark-client.js";
-import { isMessageUnavailableError, runWithMessageUnavailableGuard, } from "../message-unavailable.js";
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-/**
- * 规范化 message_id，处理合成的 ID（如 "om_xxx:auth-complete"）
- * 提取真实的飞书 message_id 部分
- */
-function normalizeMessageId(messageId) {
-    // 如果包含冒号，说明是合成的 ID（如 "om_xxx:suffix"），提取真实部分
-    if (messageId.includes(':')) {
-        return messageId.split(':')[0];
-    }
-    return messageId;
-}
+import { LarkClient } from '../../core/lark-client';
+import { normalizeMessageId } from '../../core/targets';
+import { isMessageUnavailableError, runWithMessageUnavailableGuard } from '../../core/message-unavailable';
+import { larkLogger } from '../../core/lark-logger';
+const log = larkLogger('outbound/typing');
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -38,7 +27,7 @@ function normalizeMessageId(messageId) {
  * "Typing" is a built-in Feishu emoji that shows a pencil / keyboard
  * animation, making it a natural choice for a typing cue.
  */
-const TYPING_EMOJI_TYPE = "Typing";
+const TYPING_EMOJI_TYPE = 'Typing';
 // ---------------------------------------------------------------------------
 // addTypingIndicator
 // ---------------------------------------------------------------------------
@@ -67,7 +56,7 @@ export async function addTypingIndicator(params) {
         const client = LarkClient.fromCfg(cfg, accountId).sdk;
         const response = await runWithMessageUnavailableGuard({
             messageId: normalizedId,
-            operation: "im.messageReaction.create(typing)",
+            operation: 'im.messageReaction.create(typing)',
             fn: () => client.im.messageReaction.create({
                 path: {
                     message_id: normalizedId,
@@ -83,12 +72,15 @@ export async function addTypingIndicator(params) {
     }
     catch (error) {
         if (isMessageUnavailableError(error)) {
-            console.debug(`[feishu-typing] Skip add typing indicator for unavailable message ${normalizedId}`);
+            log.debug(`Skip add typing indicator for unavailable message`, { messageId: normalizedId });
             return state;
         }
         // Silently swallow the error. The typing indicator is a best-effort
         // visual cue and must not interfere with message processing.
-        console.debug(`[feishu-typing] Failed to add typing indicator to message ${messageId}:`, error instanceof Error ? error.message : error);
+        log.debug(`Failed to add typing indicator`, {
+            messageId,
+            error: error instanceof Error ? error.message : error,
+        });
     }
     return state;
 }
@@ -118,7 +110,7 @@ export async function removeTypingIndicator(params) {
         const client = LarkClient.fromCfg(cfg, accountId).sdk;
         await runWithMessageUnavailableGuard({
             messageId: state.messageId,
-            operation: "im.messageReaction.delete(typing)",
+            operation: 'im.messageReaction.delete(typing)',
             fn: () => client.im.messageReaction.delete({
                 path: {
                     message_id: state.messageId,
@@ -129,13 +121,16 @@ export async function removeTypingIndicator(params) {
     }
     catch (error) {
         if (isMessageUnavailableError(error)) {
-            console.debug(`[feishu-typing] Skip remove typing indicator for unavailable message ${state.messageId}`);
+            log.debug(`Skip remove typing indicator for unavailable message`, { messageId: state.messageId });
             return;
         }
         // Silently swallow the error. A leftover reaction is acceptable;
         // it will not confuse the user and will disappear if the message
         // is deleted or the reaction is manually removed.
-        console.debug(`[feishu-typing] Failed to remove typing indicator from message ${state.messageId}:`, error instanceof Error ? error.message : error);
+        log.debug(`Failed to remove typing indicator`, {
+            messageId: state.messageId,
+            error: error instanceof Error ? error.message : error,
+        });
     }
 }
 //# sourceMappingURL=typing.js.map

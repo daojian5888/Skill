@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { LarkClient } from "../../core/lark-client.js";
-import { normalizeFeishuTarget, resolveReceiveIdType, } from "../../core/targets.js";
-import { optimizeMarkdownStyle } from "../../card/markdown-style.js";
-import { uploadAndSendMediaLark } from "./media.js";
-import { formatLarkError } from "../../core/api-error.js";
-import { trace } from "../../core/trace.js";
+import { LarkClient } from '../../core/lark-client';
+import { normalizeFeishuTarget, resolveReceiveIdType } from '../../core/targets';
+import { optimizeMarkdownStyle } from '../../card/markdown-style';
+import { uploadAndSendMediaLark } from './media';
+import { formatLarkError } from '../../core/api-error';
+import { larkLogger } from '../../core/lark-logger';
+const log = larkLogger('outbound/deliver');
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -14,7 +15,7 @@ import { trace } from "../../core/trace.js";
 function buildPostContent(text) {
     return JSON.stringify({
         zh_cn: {
-            content: [[{ tag: "md", text }]],
+            content: [[{ tag: 'md', text }]],
         },
     });
 }
@@ -45,7 +46,7 @@ function prepareTextForLark(text) {
     try {
         const runtime = LarkClient.runtime;
         if (runtime?.channel?.text?.convertMarkdownTables) {
-            processed = runtime.channel.text.convertMarkdownTables(processed, "bullets");
+            processed = runtime.channel.text.convertMarkdownTables(processed, 'bullets');
         }
     }
     catch {
@@ -62,36 +63,35 @@ async function sendImMessage(params) {
     const { client, to, content, msgType, replyToMessageId, replyInThread } = params;
     // --- Reply path ---
     if (replyToMessageId) {
-        trace.info(`[feishu-deliver] Replying to message ${replyToMessageId} ` +
-            `(msg_type=${msgType}, thread=${replyInThread ?? false})`);
+        log.info(`replying to message ${replyToMessageId} ` + `(msg_type=${msgType}, thread=${replyInThread ?? false})`);
         const response = await client.im.message.reply({
             path: { message_id: replyToMessageId },
             data: { content, msg_type: msgType, reply_in_thread: replyInThread },
         });
         const result = {
-            messageId: response?.data?.message_id ?? "",
-            chatId: response?.data?.chat_id ?? "",
+            messageId: response?.data?.message_id ?? '',
+            chatId: response?.data?.chat_id ?? '',
         };
-        trace.debug(`[feishu-deliver] Reply sent: messageId=${result.messageId}`);
+        log.debug(`reply sent: messageId=${result.messageId}`);
         return result;
     }
     // --- Create path ---
     const target = normalizeFeishuTarget(to);
     if (!target) {
-        throw new Error(`[feishu-deliver] Cannot send message: "${to}" is not a valid target. ` +
-            `Expected a chat_id (oc_*), open_id (ou_*), or user_id.`);
+        throw new Error(`Cannot send message: "${to}" is not a valid target. ` + `Expected a chat_id (oc_*), open_id (ou_*), or user_id.`);
     }
     const receiveIdType = resolveReceiveIdType(target);
-    trace.info(`[feishu-deliver] Creating message to ${target} (msg_type=${msgType})`);
+    log.info(`creating message to ${target} (msg_type=${msgType})`);
     const response = await client.im.message.create({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         params: { receive_id_type: receiveIdType },
         data: { receive_id: target, msg_type: msgType, content },
     });
     const result = {
-        messageId: response?.data?.message_id ?? "",
-        chatId: response?.data?.chat_id ?? "",
+        messageId: response?.data?.message_id ?? '',
+        chatId: response?.data?.chat_id ?? '',
     };
-    trace.debug(`[feishu-deliver] Message created: messageId=${result.messageId}`);
+    log.debug(`message created: messageId=${result.messageId}`);
     return result;
 }
 /**
@@ -109,32 +109,31 @@ async function sendImMessage(params) {
  */
 function detectCardJson(text) {
     const trimmed = text.trim();
-    if (!trimmed.startsWith("{") || !trimmed.endsWith("}"))
+    if (!trimmed.startsWith('{') || !trimmed.endsWith('}'))
         return undefined;
     try {
         const parsed = JSON.parse(trimmed);
-        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
             return undefined;
         }
         const obj = parsed;
         // v2 CardKit — must declare schema "2.0"
-        if (obj.schema === "2.0")
+        if (obj.schema === '2.0')
             return obj;
         // v1 Message Card — must have elements[] AND (config OR header)
-        if (Array.isArray(obj.elements) &&
-            (obj.config !== undefined || obj.header !== undefined)) {
+        if (Array.isArray(obj.elements) && (obj.config !== undefined || obj.header !== undefined)) {
             return obj;
         }
         // Template card — type: "template" with data.template_id
-        if (obj.type === "template" &&
-            typeof obj.data === "object" &&
+        if (obj.type === 'template' &&
+            typeof obj.data === 'object' &&
             obj.data !== null &&
-            typeof obj.data.template_id === "string") {
+            typeof obj.data.template_id === 'string') {
             return obj;
         }
         // Wrapped card — AI sometimes wraps card JSON with msg_type/type: "interactive"
-        if ((obj.msg_type === "interactive" || obj.type === "interactive") &&
-            typeof obj.card === "object" &&
+        if ((obj.msg_type === 'interactive' || obj.type === 'interactive') &&
+            typeof obj.card === 'object' &&
             obj.card !== null) {
             return obj.card;
         }
@@ -173,15 +172,15 @@ export async function sendTextLark(params) {
     // Detect card JSON in text — route to card sending before text preprocessing.
     const card = detectCardJson(text);
     if (card) {
-        const version = card.schema === "2.0" ? "v2" : "v1";
-        trace.info(`[feishu-deliver] Detected ${version} card JSON in text (target=${to}), routing to sendCardLark`);
+        const version = card.schema === '2.0' ? 'v2' : 'v1';
+        log.info(`detected ${version} card JSON in text (target=${to}), routing to sendCardLark`);
         return sendCardLark({ cfg, to, card, replyToMessageId, replyInThread, accountId });
     }
-    trace.info(`[feishu-deliver] sendTextLark: target=${to}, textLength=${text.length}`);
+    log.info(`sendTextLark: target=${to}, textLength=${text.length}`);
     const client = LarkClient.fromCfg(cfg, accountId).sdk;
     const processedText = prepareTextForLark(text);
     const content = buildPostContent(processedText);
-    return sendImMessage({ client, to, content, msgType: "post", replyToMessageId, replyInThread });
+    return sendImMessage({ client, to, content, msgType: 'post', replyToMessageId, replyInThread });
 }
 /**
  * Send an interactive card message to a Feishu chat or user.
@@ -220,16 +219,16 @@ export async function sendTextLark(params) {
  */
 export async function sendCardLark(params) {
     const { cfg, to, card, replyToMessageId, replyInThread, accountId } = params;
-    const version = card.schema === "2.0" ? "v2" : "v1";
-    trace.info(`[feishu-deliver] sendCardLark: target=${to}, cardVersion=${version}`);
+    const version = card.schema === '2.0' ? 'v2' : 'v1';
+    log.info(`sendCardLark: target=${to}, cardVersion=${version}`);
     const client = LarkClient.fromCfg(cfg, accountId).sdk;
     const content = JSON.stringify(card);
     try {
-        return await sendImMessage({ client, to, content, msgType: "interactive", replyToMessageId, replyInThread });
+        return await sendImMessage({ client, to, content, msgType: 'interactive', replyToMessageId, replyInThread });
     }
     catch (err) {
         const detail = formatLarkError(err);
-        trace.error(`[feishu-deliver] sendCardLark failed: ${detail}`);
+        log.error(`sendCardLark failed: ${detail}`);
         throw new Error(`Card send failed: ${detail}\n\n` +
             `Troubleshooting:\n` +
             `- Do NOT use img/image elements with fabricated img_key values — Feishu rejects invalid keys.\n` +
@@ -263,7 +262,7 @@ export async function sendCardLark(params) {
  */
 export async function sendMediaLark(params) {
     const { cfg, to, mediaUrl, replyToMessageId, replyInThread, accountId, mediaLocalRoots } = params;
-    trace.info(`[feishu-deliver] sendMediaLark: target=${to}, mediaUrl=${mediaUrl}`);
+    log.info(`sendMediaLark: target=${to}, mediaUrl=${mediaUrl}`);
     try {
         const result = await uploadAndSendMediaLark({
             cfg,
@@ -274,14 +273,14 @@ export async function sendMediaLark(params) {
             accountId,
             mediaLocalRoots,
         });
-        trace.info(`[feishu-deliver] Media sent: messageId=${result.messageId}`);
+        log.info(`media sent: messageId=${result.messageId}`);
         return { messageId: result.messageId, chatId: result.chatId };
     }
     catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        trace.error(`[feishu-deliver] sendMediaLark failed for "${mediaUrl}": ${errMsg}`);
+        log.error(`sendMediaLark failed for "${mediaUrl}": ${errMsg}`);
         // Fallback: send the URL as a clickable text link.
-        trace.info(`[feishu-deliver] Falling back to text link for "${mediaUrl}"`);
+        log.info(`falling back to text link for "${mediaUrl}"`);
         const fallbackResult = await sendTextLark({
             cfg,
             to,

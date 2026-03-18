@@ -13,21 +13,18 @@
  *   6. Content resolution    → enrich.ts (media / quote, parallel)
  *   7. Agent dispatch        → dispatch.ts
  */
-import { recordPendingHistoryEntryIfEnabled, DEFAULT_GROUP_HISTORY_LIMIT, resolveSenderCommandAuthorization, isNormalizedSenderAllowed, } from "openclaw/plugin-sdk";
-import { getLarkAccount } from "../../core/accounts.js";
-import { LarkClient } from "../../core/lark-client.js";
-import { trace } from "../../core/trace.js";
-import { parseMessageEvent } from "./parse.js";
-import { resolveSenderInfo, prefetchUserNames, resolveMedia, resolveQuotedContent, substituteMediaPaths, } from "./enrich.js";
-import { checkMessageGate, readFeishuAllowFromStore } from "./gate.js";
-import { dispatchToAgent } from "./dispatch.js";
-import { resolveFeishuGroupConfig } from "./policy.js";
-import { threadScopedKey } from "../../channel/chat-queue.js";
-// ---------------------------------------------------------------------------
-// Backward-compat re-export
-// ---------------------------------------------------------------------------
-/** @deprecated Use {@link parseMessageEvent} from `./parse.js` instead. */
-export { parseMessageEvent as parseFeishuMessageEvent } from "./parse.js";
+import { recordPendingHistoryEntryIfEnabled, DEFAULT_GROUP_HISTORY_LIMIT, resolveSenderCommandAuthorization, isNormalizedSenderAllowed, } from 'openclaw/plugin-sdk';
+import { getLarkAccount } from '../../core/accounts';
+import { LarkClient } from '../../core/lark-client';
+import { larkLogger } from '../../core/lark-logger';
+import { ticketElapsed } from '../../core/lark-ticket';
+import { parseMessageEvent } from './parse';
+import { resolveSenderInfo, prefetchUserNames, resolveMedia, resolveQuotedContent, substituteMediaPaths, } from './enrich';
+import { checkMessageGate, readFeishuAllowFromStore } from './gate';
+import { dispatchToAgent } from './dispatch';
+import { resolveFeishuGroupConfig, splitLegacyGroupAllowFrom } from './policy';
+import { threadScopedKey } from '../../channel/chat-queue';
+const logger = larkLogger('inbound/handler');
 // ---------------------------------------------------------------------------
 // Public: handle inbound message
 // ---------------------------------------------------------------------------
@@ -35,12 +32,26 @@ export async function handleFeishuMessage(params) {
     const { cfg, event, botOpenId, runtime, chatHistories, accountId, replyToMessageId, forceMention, skipTyping } = params;
     // 1. Account resolution
     const account = getLarkAccount(cfg, accountId);
-    const feishuCfg = account.config;
-    const log = runtime?.log ?? console.log;
-    const error = runtime?.error ?? console.error;
+    const accountFeishuCfg = account.config;
+    // ★ 多账号配置隔离：构造 account 级别的 ClawdbotConfig
+    //
+    //   在多账号场景下，每个 account 可以独立配置 groupPolicy / requireMention
+    //   等策略。但 SDK 的 resolveGroupPolicy / resolveRequireMention 等函数从
+    //   cfg.channels.feishu 读取配置，而 cfg 是顶层全局配置，不包含 per-account
+    //   的覆盖值。
+    //
+    //   这里将 cfg.channels.feishu 替换为经过 getLarkAccount() 合并后的
+    //   accountFeishuCfg（= base config + account override），确保下游所有 SDK 调用
+    //   都能正确读取当前 account 的配置。
+    const accountScopedCfg = {
+        ...cfg,
+        channels: { ...cfg.channels, feishu: accountFeishuCfg },
+    };
+    const log = runtime?.log ?? ((...args) => logger.info(args.map(String).join(' ')));
+    const error = runtime?.error ?? ((...args) => logger.error(args.map(String).join(' ')));
     // 2. Parse event → MessageContext (merge_forward expanded in-place)
     let ctx = await parseMessageEvent(event, botOpenId, {
-        cfg,
+        cfg: accountScopedCfg,
         accountId: account.accountId,
     });
     // 3. Enrich (lightweight): sender name + permission error tracking
@@ -51,17 +62,15 @@ export async function handleFeishuMessage(params) {
     });
     ctx = enrichedCtx;
     log(`feishu[${account.accountId}]: received message from ${ctx.senderId} in ${ctx.chatId} (${ctx.chatType})`);
-    trace.info(`received from ${ctx.senderId} in ${ctx.chatId} (${ctx.chatType})`);
-    const historyLimit = Math.max(0, feishuCfg?.historyLimit ??
-        cfg.messages?.groupChat?.historyLimit ??
-        DEFAULT_GROUP_HISTORY_LIMIT);
+    logger.info(`received from ${ctx.senderId} in ${ctx.chatId} (${ctx.chatType})`);
+    const historyLimit = Math.max(0, accountFeishuCfg?.historyLimit ?? accountScopedCfg.messages?.groupChat?.historyLimit ?? DEFAULT_GROUP_HISTORY_LIMIT);
     // 4. Gate: policy / access-control checks (skipped for synthetic messages)
     const gate = forceMention
         ? { allowed: true }
-        : await checkMessageGate({ ctx, feishuCfg, account, cfg, log });
+        : await checkMessageGate({ ctx, accountFeishuCfg, account, accountScopedCfg, log });
     if (!gate.allowed) {
-        if (gate.reason === "no_mention") {
-            trace.info(`rejected: no bot mention in group ${ctx.chatId}`);
+        if (gate.reason === 'no_mention') {
+            logger.info(`rejected: no bot mention in group ${ctx.chatId}`);
         }
         // Record history entry if the gate produced one (group no-mention case)
         if (gate.historyEntry && chatHistories) {
@@ -78,7 +87,7 @@ export async function handleFeishuMessage(params) {
     // 5. Batch pre-warm user name cache (sender + mentions)
     await prefetchUserNames({ ctx, account, log });
     // 6. Enrich (heavyweight, after gate — parallel where possible)
-    const enrichParams = { ctx, cfg, account, log };
+    const enrichParams = { ctx, accountScopedCfg, account, log };
     const [mediaResult, quotedContent] = await Promise.all([
         resolveMedia(enrichParams),
         resolveQuotedContent(enrichParams),
@@ -94,51 +103,42 @@ export async function handleFeishuMessage(params) {
     }
     // 7. Compute commandAuthorized via SDK access group command gating
     const core = LarkClient.runtime;
-    const isGroup = ctx.chatType === "group";
-    const dmPolicy = feishuCfg?.dmPolicy ?? "pairing";
+    const isGroup = ctx.chatType === 'group';
+    const dmPolicy = accountFeishuCfg?.dmPolicy ?? 'pairing';
     // Resolve per-group config early — shared by both command authorization
     // and dispatch (step 8).
-    const groupConfig = isGroup
-        ? resolveFeishuGroupConfig({ cfg: feishuCfg, groupId: ctx.chatId })
-        : undefined;
-    const defaultGroupConfig = isGroup
-        ? feishuCfg?.groups?.["*"]
-        : undefined;
+    const groupConfig = isGroup ? resolveFeishuGroupConfig({ cfg: accountFeishuCfg, groupId: ctx.chatId }) : undefined;
+    const defaultGroupConfig = isGroup ? accountFeishuCfg?.groups?.['*'] : undefined;
     // Build the sender allowlist for command authorization in group context.
     // Excludes legacy oc_xxx chat-id entries (group admission, not sender identity).
     //
     // When the explicit group sender policy is "open", pass ["*"] to align
     // command authorization with chat access (if you can chat, you can run
     // commands).  When no policy is configured (undefined fallback), default to
-    // allowlist behaviour — only users in feishuCfg.allowFrom (owner list) or
+    // allowlist behaviour — only users in accountFeishuCfg.allowFrom (owner list) or
     // an explicit groupAllowFrom/per-group allowFrom can run commands.
     const configuredGroupAllowFrom = (() => {
         if (!isGroup)
             return undefined;
         // Exclude legacy oc_xxx chat-id entries from groupAllowFrom (sender filter only).
-        const senderGroupAllowFrom = (feishuCfg?.groupAllowFrom ?? [])
-            .filter((e) => !String(e).startsWith("oc_"))
-            .map(String);
+        const { senderAllowFrom } = splitLegacyGroupAllowFrom(accountFeishuCfg?.groupAllowFrom ?? []);
+        const senderGroupAllowFrom = senderAllowFrom;
         const perGroupAllowFrom = (groupConfig?.allowFrom ?? []).map(String);
-        const defaultSenderAllowFrom = (!groupConfig && defaultGroupConfig?.allowFrom)
-            ? defaultGroupConfig.allowFrom.map(String)
-            : [];
+        const defaultSenderAllowFrom = !groupConfig && defaultGroupConfig?.allowFrom ? defaultGroupConfig.allowFrom.map(String) : [];
         const combined = [...senderGroupAllowFrom, ...perGroupAllowFrom, ...defaultSenderAllowFrom];
         if (combined.length > 0)
             return combined;
         // No allowFrom list configured — check if sender policy is explicitly "open".
         // Do NOT fall back to "open" as a default: unset policy → allowlist behaviour.
-        const explicitSenderPolicy = groupConfig?.groupPolicy ??
-            defaultGroupConfig?.groupPolicy ??
-            feishuCfg?.groupPolicy;
-        return explicitSenderPolicy === "open" ? ["*"] : [];
+        const explicitSenderPolicy = groupConfig?.groupPolicy ?? defaultGroupConfig?.groupPolicy ?? accountFeishuCfg?.groupPolicy;
+        return explicitSenderPolicy === 'open' ? ['*'] : [];
     })();
     const { commandAuthorized } = await resolveSenderCommandAuthorization({
         rawBody: ctx.content,
-        cfg,
+        cfg: accountScopedCfg,
         isGroup,
         dmPolicy,
-        configuredAllowFrom: (feishuCfg?.allowFrom ?? []).map(String),
+        configuredAllowFrom: (accountFeishuCfg?.allowFrom ?? []).map(String),
         configuredGroupAllowFrom,
         senderId: ctx.senderId,
         isSenderAllowed: (senderId, allowFrom) => isNormalizedSenderAllowed({ senderId, allowFrom }),
@@ -155,7 +155,7 @@ export async function handleFeishuMessage(params) {
             mediaPayload: mediaResult.payload,
             quotedContent,
             account,
-            cfg,
+            accountScopedCfg,
             runtime,
             chatHistories,
             historyLimit,
@@ -168,7 +168,7 @@ export async function handleFeishuMessage(params) {
     }
     catch (err) {
         error(`feishu[${account.accountId}]: failed to dispatch message: ${String(err)}`);
-        trace.error(`dispatch failed: ${String(err)} (elapsed=${trace.elapsed()}ms)`);
+        logger.error(`dispatch failed: ${String(err)} (elapsed=${ticketElapsed()}ms)`);
     }
 }
 //# sourceMappingURL=handler.js.map

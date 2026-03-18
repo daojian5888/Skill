@@ -8,7 +8,7 @@
  * tools configuration, and account types. Messaging, outbound, and channel types
  * live in their respective module type files.
  */
-import type { FeishuConfigSchema, FeishuGroupSchema, FeishuAccountConfigSchema, UATConfigSchema, z } from "./config-schema.js";
+import type { FeishuConfigSchema, FeishuGroupSchema, FeishuAccountConfigSchema, UATConfigSchema, z } from './config-schema';
 /** Fully resolved top-level Feishu channel configuration. */
 export type FeishuConfig = z.infer<typeof FeishuConfigSchema>;
 /** Per-group configuration overrides. */
@@ -21,13 +21,13 @@ export type FeishuAccountConfig = z.infer<typeof FeishuAccountConfigSchema>;
  * - `"lark"` targets the international Lark service.
  * - Any other string is treated as a custom base URL.
  */
-export type LarkBrand = "feishu" | "lark" | (string & {});
+export type LarkBrand = 'feishu' | 'lark' | (string & {});
 /** How the plugin connects to Feishu to receive events. */
-export type FeishuConnectionMode = "websocket" | "webhook";
+export type FeishuConnectionMode = 'websocket' | 'webhook';
 /** The four ID types recognised by the Feishu API. */
-export type FeishuIdType = "open_id" | "user_id" | "union_id" | "chat_id";
+export type FeishuIdType = 'open_id' | 'user_id' | 'union_id' | 'chat_id';
 /** Per-feature toggles for the Feishu-specific tool capabilities. */
-export type FeishuToolsConfig = {
+export interface FeishuToolsConfig {
     doc?: boolean;
     wiki?: boolean;
     drive?: boolean;
@@ -36,14 +36,14 @@ export type FeishuToolsConfig = {
     mail?: boolean;
     sheets?: boolean;
     okr?: boolean;
-};
+}
 /** Per-feature toggles for card footer metadata visibility. */
-export type FeishuFooterConfig = {
+export interface FeishuFooterConfig {
     status?: boolean;
     elapsed?: boolean;
-};
+}
 /** Common fields shared by all resolved account states. */
-type LarkAccountBase = {
+interface LarkAccountBase {
     accountId: string;
     enabled: boolean;
     name?: string;
@@ -51,11 +51,7 @@ type LarkAccountBase = {
     verificationToken?: string;
     brand: LarkBrand;
     config: FeishuConfig;
-    extra?: {
-        domain?: string;
-        httpHeaders?: Record<string, string>;
-    };
-};
+}
 /** An account with both `appId` and `appSecret` present. */
 export type ConfiguredLarkAccount = LarkAccountBase & {
     configured: true;
@@ -73,12 +69,20 @@ export type LarkAccount = ConfiguredLarkAccount | UnconfiguredLarkAccount;
 /** UAT (User Access Token) configuration. */
 export type FeishuUATConfig = z.infer<typeof UATConfigSchema>;
 /** The minimum credential set needed to interact with the Lark API. */
-export type LarkCredentials = {
+export interface LarkCredentials {
     appId: string;
     appSecret: string;
     encryptKey?: string;
     verificationToken?: string;
     brand: LarkBrand;
-};
+}
+/** Result of probing an app's connectivity / permissions. */
+export interface FeishuProbeResult {
+    ok: boolean;
+    error?: string;
+    appId?: string;
+    botName?: string;
+    botOpenId?: string;
+}
 export {};
 //# sourceMappingURL=types.d.ts.map

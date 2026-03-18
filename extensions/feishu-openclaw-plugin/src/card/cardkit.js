@@ -4,25 +4,28 @@
  *
  * CardKit streaming APIs for Feishu/Lark.
  */
-import { LarkClient } from "../core/lark-client.js";
-import { normalizeFeishuTarget, resolveReceiveIdType } from "../core/targets.js";
-import { trace } from "../core/trace.js";
-import { runWithMessageUnavailableGuard } from "../messaging/message-unavailable.js";
+import { LarkClient } from '../core/lark-client';
+import { larkLogger } from '../core/lark-logger';
+import { normalizeFeishuTarget, normalizeMessageId, resolveReceiveIdType } from '../core/targets';
+import { runWithMessageUnavailableGuard } from '../core/message-unavailable';
+const log = larkLogger('card/cardkit');
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 /**
- * 规范化 message_id，处理合成的 ID（如 "om_xxx:auth-complete"）
- * 提取真实的飞书 message_id 部分
+ * 记录 CardKit API 响应日志，检测错误码并抛出异常。
+ *
+ * 默认 fail-fast：body-level 非零 code 视为业务错误，立即抛出，
+ * 由调用方（streaming-card-controller 等）统一走 catch → guard 处理。
  */
-function normalizeMessageId(messageId) {
-    if (!messageId)
-        return messageId;
-    // 如果包含冒号，说明是合成的 ID（如 "om_xxx:suffix"），提取真实部分
-    if (messageId.includes(':')) {
-        return messageId.split(':')[0];
+function logCardKitResponse(params) {
+    const { resp, api, context } = params;
+    const { code, msg } = resp;
+    log.info(`cardkit ${api} response`, { code, msg, context });
+    if (code && code !== 0) {
+        log.warn(`cardkit ${api} FAILED`, { code, msg, context, fullResponse: resp });
+        throw new Error(`cardkit ${api} FAILED: code=${code}, msg=${msg ?? ''}, ${context}`);
     }
-    return messageId;
 }
 // ---------------------------------------------------------------------------
 // CardKit streaming APIs
@@ -36,16 +39,16 @@ function normalizeMessageId(messageId) {
 export async function createCardEntity(params) {
     const { cfg, card, accountId } = params;
     const client = LarkClient.fromCfg(cfg, accountId).sdk;
-    const response = await client.cardkit.v1.card.create({
+    // SDK 返回类型不完整，运行时包含 code/msg/data 字段
+    const response = (await client.cardkit.v1.card.create({
         data: {
-            type: "card_json",
+            type: 'card_json',
             data: JSON.stringify(card),
         },
-    });
-    const cardId = response?.data?.card_id
-        ?? response?.card_id
-        ?? null;
-    trace.info(`cardkit card.create: code=${response?.code}, card_id=${cardId}`);
+    }));
+    // 兼容不同 SDK 包装层：优先 data.card_id，回退顶层 card_id
+    const cardId = (response.data?.card_id ?? response.card_id) ?? null;
+    logCardKitResponse({ resp: response, api: 'card.create', context: `cardId=${cardId}` });
     return cardId;
 }
 /**
@@ -62,15 +65,16 @@ export async function createCardEntity(params) {
 export async function streamCardContent(params) {
     const { cfg, cardId, elementId, content, sequence, accountId } = params;
     const client = LarkClient.fromCfg(cfg, accountId).sdk;
-    const resp = await client.cardkit.v1.cardElement.content({
+    // SDK 返回类型不完整，运行时包含 code/msg 字段
+    const resp = (await client.cardkit.v1.cardElement.content({
         data: { content, sequence },
         path: { card_id: cardId, element_id: elementId },
+    }));
+    logCardKitResponse({
+        resp,
+        api: 'cardElement.content',
+        context: `seq=${sequence}, contentLen=${content.length}`,
     });
-    const code = resp?.code;
-    trace.debug(`cardkit cardElement.content: code=${code}, seq=${sequence}, contentLen=${content.length}`);
-    if (code && code !== 0) {
-        trace.warn(`cardkit cardElement.content FAILED: seq=${sequence}, fullResponse=${JSON.stringify(resp)}`);
-    }
 }
 /**
  * Fully replace a card using the CardKit API.
@@ -85,36 +89,22 @@ export async function streamCardContent(params) {
 export async function updateCardKitCard(params) {
     const { cfg, cardId, card, sequence, accountId } = params;
     const client = LarkClient.fromCfg(cfg, accountId).sdk;
-    const resp = await client.cardkit.v1.card.update({
+    // SDK 返回类型不完整，运行时包含 code/msg 字段
+    const resp = (await client.cardkit.v1.card.update({
         data: {
-            card: { type: "card_json", data: JSON.stringify(card) },
+            card: { type: 'card_json', data: JSON.stringify(card) },
             sequence,
         },
         path: { card_id: cardId },
+    }));
+    logCardKitResponse({
+        resp,
+        api: 'card.update',
+        context: `seq=${sequence}, cardId=${cardId}`,
     });
-    const code = resp?.code;
-    trace.info(`cardkit card.update: code=${code}, msg=${resp?.msg}, seq=${sequence}`);
-    if (code && code !== 0) {
-        trace.warn(`cardkit card.update FAILED: seq=${sequence}, fullResponse=${JSON.stringify(resp)}`);
-    }
 }
 export async function updateCardKitCardForAuth(params) {
-    const { cfg, cardId, card, sequence, accountId } = params;
-    const client = LarkClient.fromCfg(cfg, accountId).sdk;
-    const resp = await client.cardkit.v1.card.update({
-        data: {
-            card: { type: "card_json", data: JSON.stringify(card) },
-            sequence,
-        },
-        path: { card_id: cardId },
-    });
-    const code = resp?.code;
-    trace.info(`cardkit card.update: code=${code}, msg=${resp?.msg}, seq=${sequence}, cardId=${cardId}`);
-    if (code && code !== 0) {
-        const msg = `cardkit card.update FAILED: seq=${sequence}, fullResponse=${JSON.stringify(resp)}`;
-        trace.warn(msg);
-        throw new Error(msg);
-    }
+    return updateCardKitCard(params);
 }
 /**
  * Send an interactive card message by referencing a CardKit card_id.
@@ -127,7 +117,7 @@ export async function sendCardByCardId(params) {
     const { cfg, to, cardId, replyToMessageId, replyInThread, accountId } = params;
     const client = LarkClient.fromCfg(cfg, accountId).sdk;
     const contentPayload = JSON.stringify({
-        type: "card",
+        type: 'card',
         data: { card_id: cardId },
     });
     if (replyToMessageId) {
@@ -135,15 +125,15 @@ export async function sendCardByCardId(params) {
         const normalizedId = normalizeMessageId(replyToMessageId);
         const response = await runWithMessageUnavailableGuard({
             messageId: normalizedId,
-            operation: "im.message.reply(interactive.cardkit)",
+            operation: 'im.message.reply(interactive.cardkit)',
             fn: () => client.im.message.reply({
                 path: { message_id: normalizedId },
-                data: { content: contentPayload, msg_type: "interactive", reply_in_thread: replyInThread },
+                data: { content: contentPayload, msg_type: 'interactive', reply_in_thread: replyInThread },
             }),
         });
         return {
-            messageId: response?.data?.message_id ?? "",
-            chatId: response?.data?.chat_id ?? "",
+            messageId: response?.data?.message_id ?? '',
+            chatId: response?.data?.chat_id ?? '',
         };
     }
     const target = normalizeFeishuTarget(to);
@@ -152,16 +142,18 @@ export async function sendCardByCardId(params) {
     }
     const receiveIdType = resolveReceiveIdType(target);
     const response = await client.im.message.create({
+        // SDK 类型将 receive_id_type 限定为字面量联合，但运行时接受动态值
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         params: { receive_id_type: receiveIdType },
         data: {
             receive_id: target,
-            msg_type: "interactive",
+            msg_type: 'interactive',
             content: contentPayload,
         },
     });
     return {
-        messageId: response?.data?.message_id ?? "",
-        chatId: response?.data?.chat_id ?? "",
+        messageId: response?.data?.message_id ?? '',
+        chatId: response?.data?.chat_id ?? '',
     };
 }
 /**
@@ -173,17 +165,18 @@ export async function sendCardByCardId(params) {
 export async function setCardStreamingMode(params) {
     const { cfg, cardId, streamingMode, sequence, accountId } = params;
     const client = LarkClient.fromCfg(cfg, accountId).sdk;
-    const resp = await client.cardkit.v1.card.settings({
+    // SDK 返回类型不完整，运行时包含 code/msg 字段
+    const resp = (await client.cardkit.v1.card.settings({
         data: {
             settings: JSON.stringify({ streaming_mode: streamingMode }),
             sequence,
         },
         path: { card_id: cardId },
+    }));
+    logCardKitResponse({
+        resp,
+        api: 'card.settings',
+        context: `seq=${sequence}, streaming_mode=${streamingMode}`,
     });
-    const code = resp?.code;
-    trace.info(`cardkit card.settings: code=${code}, msg=${resp?.msg}, seq=${sequence}, streaming_mode=${streamingMode}`);
-    if (code && code !== 0) {
-        trace.warn(`cardkit card.settings FAILED: seq=${sequence}, fullResponse=${JSON.stringify(resp)}`);
-    }
 }
 //# sourceMappingURL=cardkit.js.map

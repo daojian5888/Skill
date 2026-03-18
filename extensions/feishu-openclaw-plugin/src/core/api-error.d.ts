@@ -13,13 +13,22 @@
  *    whose properties include the Feishu error `code` and `msg`.
  *    Handled by {@link formatLarkError}.
  *
- * Both paths intercept well-known codes (e.g. 99991672 — missing API scopes)
+ * Both paths intercept well-known codes (e.g. LARK_ERROR.APP_SCOPE_MISSING (99991672) — missing API scopes)
  * and produce user-friendly messages with actionable authorization links.
  */
 /**
+ * 从 Lark SDK 抛错对象中提取飞书 API code。
+ *
+ * 支持三种常见结构：
+ * - `{ code }` — SDK 直接挂载
+ * - `{ data: { code } }` — 响应体嵌套
+ * - `{ response: { data: { code } } }` — Axios 风格
+ */
+export declare function extractLarkApiCode(err: unknown): number | undefined;
+/**
  * Assert that a Lark SDK response is successful (code === 0).
  *
- * For permission errors (code 99991672), the thrown error includes the
+ * For permission errors (code LARK_ERROR.APP_SCOPE_MISSING (99991672)), the thrown error includes the
  * required scope names and a direct authorization URL so the AI can
  * present it to the end user.
  */
@@ -32,7 +41,7 @@ export declare function assertLarkOk(res: {
  *
  * The Lark SDK throws Axios errors whose object carries Feishu-specific
  * fields (`code`, `msg`) alongside the standard `message`.  For permission
- * errors (99991672) we format a user-friendly string with scopes + auth URL.
+ * errors (LARK_ERROR.APP_SCOPE_MISSING (99991672)) we format a user-friendly string with scopes + auth URL.
  * For all other errors we try `err.msg` first (the Feishu detail) and fall
  * back to `err.message` (the generic Axios text).
  */

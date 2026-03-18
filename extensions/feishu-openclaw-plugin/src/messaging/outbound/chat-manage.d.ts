@@ -7,15 +7,15 @@
  * Provides functions to update chat settings (name, avatar), manage
  * members (add, remove, list) using the IM Chat API.
  */
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
-export type FeishuChatMember = {
+import type { OpenClawConfig } from 'openclaw/plugin-sdk';
+export interface FeishuChatMember {
     /** Member ID (open_id by default). */
     memberId: string;
     /** Display name of the member. */
     name: string;
     /** ID type: "open_id", "union_id", or "user_id". */
     memberIdType: string;
-};
+}
 /**
  * Update chat settings such as name or avatar.
  */

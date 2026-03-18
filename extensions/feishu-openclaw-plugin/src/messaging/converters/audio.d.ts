@@ -4,6 +4,6 @@
  *
  * Converter for "audio" message type.
  */
-import type { ContentConverterFn } from "./types.js";
+import type { ContentConverterFn } from './types';
 export declare const convertAudio: ContentConverterFn;
 //# sourceMappingURL=audio.d.ts.map

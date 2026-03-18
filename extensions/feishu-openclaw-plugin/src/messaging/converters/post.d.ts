@@ -7,6 +7,6 @@
  * Preserves structure as Markdown: links as `[text](href)`,
  * images as `![image](key)`, code blocks, and mention resolution.
  */
-import type { ContentConverterFn } from "./types.js";
+import type { ContentConverterFn } from './types';
 export declare const convertPost: ContentConverterFn;
 //# sourceMappingURL=post.d.ts.map

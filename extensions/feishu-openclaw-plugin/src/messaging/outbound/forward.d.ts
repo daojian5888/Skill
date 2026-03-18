@@ -7,8 +7,8 @@
  * Provides a function to forward an existing message to another chat
  * or user using the IM Message Forward API.
  */
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
-import type { FeishuSendResult } from "../types.js";
+import type { OpenClawConfig } from 'openclaw/plugin-sdk';
+import type { FeishuSendResult } from '../types';
 /**
  * Forward an existing message to another chat or user.
  *
