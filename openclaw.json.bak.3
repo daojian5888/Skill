@@ -1,13 +1,30 @@
 {
   "meta": {
-    "lastTouchedVersion": "2026.3.2",
-    "lastTouchedAt": "2026-03-05T15:55:33.659Z"
+    "lastTouchedVersion": "2026.3.8",
+    "lastTouchedAt": "2026-03-12T09:26:48.574Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-05T11:15:21.053Z",
     "lastRunVersion": "2026.3.2",
     "lastRunCommand": "onboard",
     "lastRunMode": "local"
+  },
+  "update": {
+    "checkOnStart": false
+  },
+  "browser": {
+    "enabled": true,
+    "color": "#00AA00",
+    "executablePath": "/usr/bin/chromium-browser",
+    "headless": true,
+    "noSandbox": true,
+    "defaultProfile": "openclaw",
+    "extraArgs": [
+      "--window-size=1920,1080",
+      "--test-type",
+      "--disable-gpu",
+      "--no-sandbox"
+    ]
   },
   "secrets": {
     "providers": {
@@ -80,7 +97,6 @@
   },
   "agents": {
     "defaults": {
-      "verboseDefault": "off",
       "model": {
         "primary": "miaoda/miaoda-model-auto"
       },
@@ -98,24 +114,25 @@
         "mode": "safeguard",
         "reserveTokensFloor": 50000
       },
-      "maxConcurrent": 4,
-      "subagents": {
-        "maxConcurrent": 8
+      "verboseDefault": "off",
+      "blockStreamingCoalesce": {
+        "minChars": 20,
+        "maxChars": 800,
+        "idleMs": 300
       },
       "humanDelay": {
         "mode": "off"
       },
-      "blockStreamingCoalesce": {
-        "idleMs": 300,
-        "minChars": 20,
-        "maxChars": 800
-      },
       "heartbeat": {
+        "every": "4h",
         "activeHours": {
-          "end": "22:00",
-          "start": "08:00"
-        },
-        "every": "4h"
+          "start": "08:00",
+          "end": "22:00"
+        }
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
       }
     }
   },
@@ -137,20 +154,6 @@
     "sessions": {
       "visibility": "all"
     }
-  },
-  "browser": {
-    "enabled": true,
-    "color": "#00AA00",
-    "executablePath": "/usr/bin/chromium-browser",
-    "headless": true,
-    "noSandbox": true,
-    "defaultProfile": "openclaw",
-    "extraArgs": [
-      "--window-size=1920,1080",
-      "--test-type",
-      "--disable-gpu",
-      "--no-sandbox"
-    ]
   },
   "messages": {
     "ackReactionScope": "group-mentions"
@@ -180,11 +183,11 @@
         "id": "/channels_feishu_app_secret"
       },
       "domain": "feishu",
-      "streaming": false,
+      "streaming": true,
       "threadSession": true,
       "footer": {
-        "elapsed": false,
-        "status": false
+        "elapsed": true,
+        "status": true
       }
     }
   },
@@ -198,10 +201,10 @@
     "mode": "local",
     "bind": "loopback",
     "controlUi": {
-      "dangerouslyDisableDeviceAuth": true,
       "allowedOrigins": [
         "https://qddaojian-app_4jpt97x0dgm4m-1859392467888152.aiforce.run"
-      ]
+      ],
+      "dangerouslyDisableDeviceAuth": true
     },
     "auth": {
       "mode": "token",
@@ -344,13 +347,11 @@
       }
     }
   },
-  "update": {
-    "checkOnStart": false
-  },
   "plugins": {
     "allow": [
       "feishu-greeting",
-      "miaoda-keepalive"
+      "miaoda-keepalive",
+      "feishu-openclaw-plugin"
     ],
     "entries": {
       "feishu": {
@@ -368,14 +369,24 @@
       "miaoda-keepalive": {
         "enabled": true,
         "config": {}
+      },
+      "feishu-openclaw-plugin": {
+        "enabled": true
       }
     },
     "installs": {
       "feishu-openclaw-plugin": {
         "source": "npm",
-        "spec": "@larksuiteoapi/feishu-openclaw-plugin",
-        "installPath": "./extensions/feishu-openclaw-plugin",
-        "version": "2026.3.8-beta.0"
+        "spec": "@larksuite/openclaw-lark",
+        "installPath": "/home/gem/workspace/agent/extensions/feishu-openclaw-plugin",
+        "version": "2026.3.10",
+        "resolvedName": "@larksuite/openclaw-lark",
+        "resolvedVersion": "2026.3.10",
+        "resolvedSpec": "@larksuite/openclaw-lark@2026.3.10",
+        "integrity": "sha512-5XCPcEch2Bab2g284odCkxRCaRMerBezy9Qc6eUfnsO4HvLrqxR406DefTn1mr/ibPVNa3sGxKvjTg3rFXM4mg==",
+        "shasum": "2ce8efc9bb8814aaa5d6019d2eee4ed856712756",
+        "resolvedAt": "2026-03-12T09:26:40.574Z",
+        "installedAt": "2026-03-12T09:26:43.207Z"
       },
       "feishu-greeting": {
         "source": "path",

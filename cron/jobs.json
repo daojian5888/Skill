@@ -124,7 +124,7 @@
       "name": "每日AI科技早报",
       "enabled": true,
       "createdAtMs": 1773825624158,
-      "updatedAtMs": 1773825624158,
+      "updatedAtMs": 1773883016183,
       "schedule": {
         "expr": "0 9 * * *",
         "tz": "Asia/Shanghai",
@@ -143,7 +143,14 @@
         "to": "ou_d75c71eb9cc3369175d62f2892cd7b8b"
       },
       "state": {
-        "nextRunAtMs": 1773882000000
+        "nextRunAtMs": 1773968400000,
+        "lastRunAtMs": 1773882870480,
+        "lastRunStatus": "ok",
+        "lastStatus": "ok",
+        "lastDurationMs": 145703,
+        "lastDelivered": true,
+        "lastDeliveryStatus": "delivered",
+        "consecutiveErrors": 0
       }
     }
   ]

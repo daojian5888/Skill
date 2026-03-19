@@ -116,6 +116,36 @@
       "state": {
         "nextRunAtMs": 1798448400000
       }
+    },
+    {
+      "id": "cfd2966c-5e50-4153-ac26-a51b644dbe4a",
+      "agentId": "main",
+      "sessionKey": "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b",
+      "name": "每日AI科技早报",
+      "enabled": true,
+      "createdAtMs": 1773825624158,
+      "updatedAtMs": 1773825624158,
+      "schedule": {
+        "expr": "0 9 * * *",
+        "tz": "Asia/Shanghai",
+        "kind": "cron"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "请帮我搜索今日AI科技领域的热点新闻和重要资讯，整理成简洁清晰的早报内容发给用户。搜索关键词：AI、人工智能、大模型、OpenAI、ChatGPT、DeepSeek等。\n\n要求：\n1. 标题+简要说明\n2. 控制在5-10条以内\n3. 简洁清晰\n4. 早上9点发送，所以搜索的是最新动态",
+        "model": "minimax/MiniMax-M2.5",
+        "timeoutSeconds": 300
+      },
+      "delivery": {
+        "mode": "announce",
+        "to": "ou_d75c71eb9cc3369175d62f2892cd7b8b"
+      },
+      "state": {
+        "nextRunAtMs": 1773882000000,
+        "runningAtMs": 1773882870466
+      }
     }
   ]
 }
