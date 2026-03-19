@@ -2,10 +2,10 @@
   "providers": {
     "miaoda": {
       "baseUrl": "https://innerapi.aiforce.cloud/innerapi/api/v1/sgw/model/proxy",
-      "apiKey": "secretref-managed",
+      "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxMzY3MzE0NDAyX2FwcF80anB0OTd4MGRnbTRtX3ByZXZpZXciLCJleHAiOjE3NzM5Njc1NzMsIm5iZiI6MTc3Mzg4MTE3MywiaWF0IjoxNzczODgxMTczLCJqdGkiOiI2NGU2NjQ2YS1kOTIxLWIxOTktZGQyZC03ZDBiM2EwZWE1MTEiLCJ0ZW5hbnRfaWQiOjEzNjczMTQ0MDIsInVzZXJfaWQiOjE4NTY3MDIwMjM1MTk0MTUsImFwcF9pZCI6ImFwcF80anB0OTd4MGRnbTRtIiwiYXBwX2VudiI6InByZXZpZXciLCJhY2Nlc3Nfa2V5IjoiMTM2NzMxNDQwMl9hcHBfNGpwdDk3eDBkZ200bV9wcmV2aWV3Iiwic2FuZGJveF9pZCI6IjE4NTkzOTI0Njc4ODgxNTIifQ.qIWeiGq28zDypyB1SD8b9f4t8QBV7ubC-krtVZnEha4",
       "api": "openai-completions",
       "headers": {
-        "x-api-key": "secretref-managed"
+        "x-api-key": "1367314402_app_4jpt97x0dgm4m_preview"
       },
       "models": [
         {
@@ -47,7 +47,7 @@
     },
     "minimax": {
       "baseUrl": "https://api.minimaxi.com/anthropic",
-      "apiKey": "secretref-managed",
+      "apiKey": "sk-cp-10tZGZEn-2pD29XEFHdPT-VGkAngLBbZoRS7Bvm0LrT_7X04O-IsY19u2EhxV_u8qM-j1p3AHEzelbxpn77IxuF27eyDX1FUAi0gqi4L2W8X1CoyFyGna-c",
       "api": "anthropic-messages",
       "models": [
         {

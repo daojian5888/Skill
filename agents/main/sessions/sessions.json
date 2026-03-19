@@ -836,7 +836,7 @@
   },
   "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b": {
     "sessionId": "28a3415b-1a6a-43d3-8f09-70585f49c860",
-    "updatedAt": 1773901234316,
+    "updatedAt": 1773901484214,
     "systemSent": true,
     "abortedLastRun": false,
     "chatType": "direct",
@@ -1160,7 +1160,7 @@
     "model": "MiniMax-M2.5",
     "systemPromptReport": {
       "source": "run",
-      "generatedAt": 1773901197367,
+      "generatedAt": 1773901341964,
       "sessionId": "28a3415b-1a6a-43d3-8f09-70585f49c860",
       "sessionKey": "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b",
       "provider": "minimax",
@@ -1180,9 +1180,9 @@
         "sandboxed": false
       },
       "systemPrompt": {
-        "chars": 42449,
+        "chars": 42432,
         "projectContextChars": 12535,
-        "nonProjectContextChars": 29914
+        "nonProjectContextChars": 29897
       },
       "injectedWorkspaceFiles": [
         {
@@ -1672,15 +1672,15 @@
         ]
       }
     },
-    "cacheRead": 145706,
-    "cacheWrite": 335,
+    "cacheRead": 36355,
+    "cacheWrite": 0,
     "totalTokensFresh": true,
     "contextTokens": 200000,
-    "inputTokens": 52,
-    "outputTokens": 667,
+    "inputTokens": 232180,
+    "outputTokens": 1056,
     "memoryFlushAt": 1773898703837,
     "memoryFlushCompactionCount": 1,
-    "totalTokens": 146093
+    "totalTokens": 115267
   },
   "agent:main:feishu:direct:ou_35fb190135a668a941cf060191cd58e0": {
     "origin": {
