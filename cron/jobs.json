@@ -8,7 +8,7 @@
       "name": "请按照日报点评工作流执行昨日日报点评",
       "enabled": true,
       "createdAtMs": 1773816576724,
-      "updatedAtMs": 1773816576724,
+      "updatedAtMs": 1773885848506,
       "schedule": {
         "expr": "0 10 * * 1-5",
         "kind": "cron",
@@ -27,7 +27,14 @@
         "mode": "announce"
       },
       "state": {
-        "nextRunAtMs": 1773885600000
+        "nextRunAtMs": 1773972000000,
+        "lastRunAtMs": 1773885600006,
+        "lastRunStatus": "ok",
+        "lastStatus": "ok",
+        "lastDurationMs": 248500,
+        "lastDelivered": true,
+        "lastDeliveryStatus": "delivered",
+        "consecutiveErrors": 0
       }
     },
     {
