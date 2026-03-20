@@ -1,2 +1,3 @@
-2026/03/19-14:50:17.786 11e4e8 Creating DB /home/gem/workspace/agent/browser/openclaw/user-data/Default/shared_proto_db since it was missing.
-2026/03/19-14:50:17.820 11e4e8 Reusing MANIFEST /home/gem/workspace/agent/browser/openclaw/user-data/Default/shared_proto_db/MANIFEST-000001
+2026/03/19-14:50:26.194 11e55b Reusing MANIFEST /home/gem/workspace/agent/browser/openclaw/user-data/Default/shared_proto_db/MANIFEST-000001
+2026/03/19-14:50:26.194 11e55b Recovering log #3
+2026/03/19-14:50:26.195 11e55b Reusing old log /home/gem/workspace/agent/browser/openclaw/user-data/Default/shared_proto_db/000003.log 

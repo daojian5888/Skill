@@ -1,2 +1,12 @@
-2026/03/19-14:50:17.614 11e511 Creating DB /home/gem/workspace/agent/browser/openclaw/user-data/Default/Local Storage/leveldb since it was missing.
-2026/03/19-14:50:17.663 11e511 Reusing MANIFEST /home/gem/workspace/agent/browser/openclaw/user-data/Default/Local Storage/leveldb/MANIFEST-000001
+2026/03/19-14:50:26.136 11e578 Reusing MANIFEST /home/gem/workspace/agent/browser/openclaw/user-data/Default/Local Storage/leveldb/MANIFEST-000001
+2026/03/19-14:50:26.143 11e578 Recovering log #3
+2026/03/19-14:50:26.143 11e578 Reusing old log /home/gem/workspace/agent/browser/openclaw/user-data/Default/Local Storage/leveldb/000003.log 
+2026/03/19-23:27:23.196 11e57a Level-0 table #5: started
+2026/03/19-23:27:23.197 11e57a Level-0 table #5: 31819 bytes OK
+2026/03/19-23:27:23.198 11e57a Delete type=0 #3
+2026/03/20-04:17:23.206 11e57a Level-0 table #7: started
+2026/03/20-04:17:23.208 11e57a Level-0 table #7: 28239 bytes OK
+2026/03/20-04:17:23.209 11e57a Delete type=0 #4
+2026/03/20-09:52:23.947 11e578 Level-0 table #9: started
+2026/03/20-09:52:23.949 11e578 Level-0 table #9: 42138 bytes OK
+2026/03/20-09:52:23.951 11e578 Delete type=0 #6

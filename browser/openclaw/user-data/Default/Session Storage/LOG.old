@@ -1,2 +1,3 @@
-2026/03/19-14:50:17.717 11e511 Creating DB /home/gem/workspace/agent/browser/openclaw/user-data/Default/Session Storage since it was missing.
-2026/03/19-14:50:17.786 11e511 Reusing MANIFEST /home/gem/workspace/agent/browser/openclaw/user-data/Default/Session Storage/MANIFEST-000001
+2026/03/19-14:50:26.202 11e578 Reusing MANIFEST /home/gem/workspace/agent/browser/openclaw/user-data/Default/Session Storage/MANIFEST-000001
+2026/03/19-14:50:26.203 11e578 Recovering log #3
+2026/03/19-14:50:26.203 11e578 Reusing old log /home/gem/workspace/agent/browser/openclaw/user-data/Default/Session Storage/000003.log 

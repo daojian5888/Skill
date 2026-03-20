@@ -12,6 +12,18 @@
     "find-skills": {
       "version": "0.1.0",
       "installedAt": 1773418862235
+    },
+    "capability-evolver": {
+      "version": "1.32.4",
+      "installedAt": 1774030996599
+    },
+    "azhua-skill-vetter": {
+      "version": "1.0.0",
+      "installedAt": 1774031102342
+    },
+    "playwright": {
+      "version": "1.0.3",
+      "installedAt": 1774031522409
     }
   }
 }
