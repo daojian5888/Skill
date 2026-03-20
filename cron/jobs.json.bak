@@ -8,9 +8,9 @@
       "name": "请按照日报点评工作流执行昨日日报点评",
       "enabled": true,
       "createdAtMs": 1773816576724,
-      "updatedAtMs": 1773816576724,
+      "updatedAtMs": 1773968787973,
       "schedule": {
-        "expr": "0 10 * * 1-5",
+        "expr": "0 9 * * 1-5",
         "kind": "cron",
         "tz": "Asia/Shanghai"
       },
@@ -27,8 +27,14 @@
         "mode": "announce"
       },
       "state": {
-        "nextRunAtMs": 1773885600000,
-        "runningAtMs": 1773885600005
+        "nextRunAtMs": 1774227600000,
+        "lastRunAtMs": 1773968400002,
+        "lastRunStatus": "ok",
+        "lastStatus": "ok",
+        "lastDurationMs": 387971,
+        "lastDelivered": true,
+        "lastDeliveryStatus": "delivered",
+        "consecutiveErrors": 0
       }
     },
     {
@@ -125,7 +131,7 @@
       "name": "每日AI科技早报",
       "enabled": true,
       "createdAtMs": 1773825624158,
-      "updatedAtMs": 1773883016183,
+      "updatedAtMs": 1773968957118,
       "schedule": {
         "expr": "0 9 * * *",
         "tz": "Asia/Shanghai",
@@ -144,14 +150,49 @@
         "to": "ou_d75c71eb9cc3369175d62f2892cd7b8b"
       },
       "state": {
-        "nextRunAtMs": 1773968400000,
-        "lastRunAtMs": 1773882870480,
+        "nextRunAtMs": 1774054800000,
+        "lastRunAtMs": 1773968787973,
         "lastRunStatus": "ok",
         "lastStatus": "ok",
-        "lastDurationMs": 145703,
+        "lastDurationMs": 169145,
         "lastDelivered": true,
         "lastDeliveryStatus": "delivered",
         "consecutiveErrors": 0
+      }
+    },
+    {
+      "id": "3709e1d2-67b1-4eff-92e4-b586ec802978",
+      "agentId": "main",
+      "sessionKey": "agent:main:feishu:direct:ou_d75c71eb9cc3369175d62f2892cd7b8b",
+      "name": "空闲检测自主学习",
+      "enabled": true,
+      "createdAtMs": 1773929629518,
+      "updatedAtMs": 1773973579305,
+      "schedule": {
+        "everyMs": 300000,
+        "kind": "every",
+        "anchorMs": 1773929629518
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "请检测当前是否有活跃对话（查询 sessions_list）。如果没有活跃对话（没有最近5分钟内的用户消息），则执行自主学习：\n\n1. 搜索企业数字化转型、智能安防、网络系统集成、IT运维服务等道简网络相关行业的最新动态\n2. 整理3-5条关键信息\n3. 保存到 /home/gem/workspace/agent/workspace/memory/学习笔记.md\n\n如果有活跃对话，直接回复\"检测到活跃对话，不执行自主学习\"",
+        "model": "default",
+        "timeoutSeconds": 120
+      },
+      "delivery": {
+        "mode": "none"
+      },
+      "state": {
+        "nextRunAtMs": 1773973759296,
+        "lastRunAtMs": 1773973459296,
+        "lastRunStatus": "error",
+        "lastStatus": "error",
+        "lastDurationMs": 120009,
+        "lastDeliveryStatus": "not-requested",
+        "consecutiveErrors": 1,
+        "runningAtMs": 1773973759298
       }
     }
   ]
