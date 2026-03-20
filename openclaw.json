@@ -42,11 +42,7 @@
         "source": "file",
         "path": "/home/gem/workspace/.force/openclaw/minimax-api-key",
         "mode": "singleValue"
-      }
-    }
-  },
-  "secrets": {
-    "providers": {
+      },
       "gemini-provider": {
         "source": "file",
         "path": "/home/gem/.openclaw/secrets/gemini-api-key",
