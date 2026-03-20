@@ -167,7 +167,7 @@
       "name": "空闲检测自主学习",
       "enabled": true,
       "createdAtMs": 1773929629518,
-      "updatedAtMs": 1773973879309,
+      "updatedAtMs": 1773982945818,
       "schedule": {
         "everyMs": 300000,
         "kind": "every",
@@ -185,14 +185,14 @@
         "mode": "none"
       },
       "state": {
-        "nextRunAtMs": 1773974059299,
-        "lastRunAtMs": 1773973759299,
+        "nextRunAtMs": 1773986545818,
+        "lastRunAtMs": 1773982825806,
         "lastRunStatus": "error",
         "lastStatus": "error",
-        "lastDurationMs": 120010,
+        "lastDurationMs": 120012,
         "lastDeliveryStatus": "not-requested",
-        "consecutiveErrors": 2,
-        "runningAtMs": 1773974422659
+        "consecutiveErrors": 7,
+        "runningAtMs": 1773986545823
       }
     }
   ]

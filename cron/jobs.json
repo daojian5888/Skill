@@ -167,7 +167,7 @@
       "name": "空闲检测自主学习",
       "enabled": true,
       "createdAtMs": 1773929629518,
-      "updatedAtMs": 1773974423444,
+      "updatedAtMs": 1773986665838,
       "schedule": {
         "everyMs": 300000,
         "kind": "every",
@@ -185,16 +185,14 @@
         "mode": "none"
       },
       "state": {
-        "nextRunAtMs": 1773974723444,
-        "lastRunAtMs": 1773974422687,
+        "nextRunAtMs": 1773990265838,
+        "lastRunAtMs": 1773986545824,
         "lastRunStatus": "error",
         "lastStatus": "error",
-        "lastDurationMs": 757,
-        "lastDeliveryStatus": "not-delivered",
-        "consecutiveErrors": 3,
-        "lastError": "401 status code (no body)",
-        "lastDelivered": false,
-        "lastDeliveryError": "401 status code (no body)"
+        "lastDurationMs": 120014,
+        "lastDeliveryStatus": "not-requested",
+        "consecutiveErrors": 8,
+        "lastError": "cron: job execution timed out"
       }
     }
   ]

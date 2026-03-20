@@ -1,37 +1,4 @@
 {
   "version": 2,
-  "runs": {
-    "65f71d4a-e4fc-41ad-bd22-c3736e46ab94": {
-      "runId": "65f71d4a-e4fc-41ad-bd22-c3736e46ab94",
-      "childSessionKey": "agent:main:subagent:ada0162b-322f-4e31-a9ba-4a9dbed8fd6b",
-      "requesterSessionKey": "agent:main:cron:3709e1d2-67b1-4eff-92e4-b586ec802978",
-      "requesterOrigin": {
-        "channel": "feishu",
-        "accountId": "default"
-      },
-      "requesterDisplayKey": "agent:main:cron:3709e1d2-67b1-4eff-92e4-b586ec802978",
-      "task": "搜索以下领域的最新动态（2025-2026年）：\n1. 企业数字化转型趋势\n2. 智能安防行业动态\n3. 网络系统集成技术发展\n4. IT运维服务市场趋势\n\n请整理3-5条对道简网络（企业数字化解决方案、网络系统集成、智能安防与弱电工程、IT全周期运维服务）有价值的行业信息，每条包含：标题、关键信息、价值点",
-      "cleanup": "keep",
-      "expectsCompletionMessage": true,
-      "spawnMode": "run",
-      "label": "行业动态搜索",
-      "model": "minimax/MiniMax-M2.5",
-      "workspaceDir": "/home/gem/workspace/agent/workspace",
-      "runTimeoutSeconds": 120,
-      "createdAt": 1773972276529,
-      "startedAt": 1773972277908,
-      "archiveAtMs": 1773975876529,
-      "cleanupHandled": true,
-      "retainAttachmentsOnKeep": false,
-      "endedAt": 1773972397959,
-      "outcome": {
-        "status": "timeout"
-      },
-      "endedReason": "subagent-complete",
-      "frozenResultText": "Command still running (session glow-lagoon, pid 1310225). Use process (list/poll/log/write/kill/clear/remove) for follow-up.",
-      "frozenResultCapturedAt": 1773972396915,
-      "endedHookEmittedAt": 1773972408165,
-      "cleanupCompletedAt": 1773972408165
-    }
-  }
+  "runs": {}
 }

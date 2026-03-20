@@ -70,7 +70,7 @@
       ]
     },
     "gemini": {
-      "baseUrl": "https://api.siliconflow.cn/v1",
+      "baseUrl": "https://api.nextaicore.com/v1",
       "apiKey": "secretref-managed",
       "api": "openai-completions",
       "models": [

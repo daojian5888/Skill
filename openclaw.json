@@ -53,7 +53,7 @@
   "models": {
     "providers": {
       "gemini": {
-        "baseUrl": "https://api.siliconflow.cn/v1",
+        "baseUrl": "https://api.nextaicore.com/v1",
         "apiKey": {
           "source": "file",
           "provider": "gemini-provider",
@@ -263,7 +263,7 @@
   "gateway": {
     "port": 18789,
     "mode": "local",
-    "bind": "loopback",
+    "bind": "lan",
     "controlUi": {
       "allowedOrigins": [
         "https://qddaojian-app_4jpt97x0dgm4m-1859392467888152.aiforce.run"
