@@ -40,7 +40,7 @@ if ! check_health; then
   
   # 启动服务
   cd /home/gem/workspace/agent || exit 1
-  nohup npx openclaw@2026.3.13 gateway run --port 18789 > logs/startup.log 2>&1 &
+  nohup node node_modules/openclaw/openclaw.mjs gateway run --port 18789 > logs/startup.log 2>&1 &
   sleep 10
   
   # 验证

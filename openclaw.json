@@ -180,7 +180,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "minimax/MiniMax-M2.7"
+        "primary": "minimax/MiniMax-M2.5"
       },
       "imageModel": "miaoda/miaoda-auto-multimodal",
       "models": {
