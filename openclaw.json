@@ -1,7 +1,7 @@
 {
   "meta": {
-    "lastTouchedVersion": "2026.3.13",
-    "lastTouchedAt": "2026-03-20T07:58:12.708Z"
+    "lastTouchedVersion": "2026.3.8",
+    "lastTouchedAt": "2026-03-21T13:39:13.082Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-05T11:15:21.053Z",
@@ -433,7 +433,8 @@
       "feishu-greeting",
       "miaoda-keepalive",
       "feishu-openclaw-plugin",
-      "minimax-portal-auth"
+      "minimax-portal-auth",
+      "feishu"
     ],
     "entries": {
       "feishu": {

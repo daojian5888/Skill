@@ -1,7 +1,7 @@
 {
   "meta": {
     "lastTouchedVersion": "2026.3.8",
-    "lastTouchedAt": "2026-03-12T09:26:48.574Z"
+    "lastTouchedAt": "2026-03-17T16:00:18.385Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-05T11:15:21.053Z",
@@ -37,6 +37,11 @@
         "source": "file",
         "path": "/home/gem/workspace/.force/openclaw/miaoda-openclaw-secrets.json",
         "mode": "json"
+      },
+      "minimax-provider": {
+        "source": "file",
+        "path": "/home/gem/workspace/.force/openclaw/minimax-api-key",
+        "mode": "singleValue"
       }
     }
   },
@@ -92,13 +97,40 @@
             "maxTokens": 8192
           }
         ]
+      },
+      "minimax": {
+        "api": "anthropic-messages",
+        "baseUrl": "https://api.minimaxi.com/anthropic",
+        "apiKey": {
+          "source": "file",
+          "provider": "minimax-provider",
+          "id": "value"
+        },
+        "models": [
+          {
+            "id": "MiniMax-M2.5",
+            "name": "MiniMax M2.5",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0.3,
+              "output": 1.2,
+              "cacheRead": 0.03,
+              "cacheWrite": 0.12
+            },
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
       }
     }
   },
   "agents": {
     "defaults": {
       "model": {
-        "primary": "miaoda/miaoda-model-auto"
+        "primary": "minimax/MiniMax-M2.5"
       },
       "imageModel": "miaoda/miaoda-auto-multimodal",
       "models": {
@@ -351,7 +383,8 @@
     "allow": [
       "feishu-greeting",
       "miaoda-keepalive",
-      "feishu-openclaw-plugin"
+      "feishu-openclaw-plugin",
+      "minimax-portal-auth"
     ],
     "entries": {
       "feishu": {
@@ -371,6 +404,9 @@
         "config": {}
       },
       "feishu-openclaw-plugin": {
+        "enabled": true
+      },
+      "minimax-portal-auth": {
         "enabled": true
       }
     },
