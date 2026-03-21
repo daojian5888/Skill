@@ -147,7 +147,7 @@
       "name": "每日AI科技早报",
       "enabled": true,
       "createdAtMs": 1773825624158,
-      "updatedAtMs": 1773968957118,
+      "updatedAtMs": 1774054945607,
       "schedule": {
         "expr": "0 9 * * *",
         "tz": "Asia/Shanghai",
@@ -166,11 +166,11 @@
         "to": "ou_d75c71eb9cc3369175d62f2892cd7b8b"
       },
       "state": {
-        "nextRunAtMs": 1774054800000,
-        "lastRunAtMs": 1773968787973,
+        "nextRunAtMs": 1774141200000,
+        "lastRunAtMs": 1774054800004,
         "lastRunStatus": "ok",
         "lastStatus": "ok",
-        "lastDurationMs": 169145,
+        "lastDurationMs": 145603,
         "lastDelivered": true,
         "lastDeliveryStatus": "delivered",
         "consecutiveErrors": 0
@@ -183,7 +183,7 @@
       "name": "空闲检测自主学习",
       "enabled": true,
       "createdAtMs": 1773929629518,
-      "updatedAtMs": 1774031522264,
+      "updatedAtMs": 1774057118759,
       "schedule": {
         "everyMs": 300000,
         "kind": "every",
@@ -201,11 +201,11 @@
         "mode": "none"
       },
       "state": {
-        "nextRunAtMs": 1774031786935,
-        "lastRunAtMs": 1774031486935,
+        "nextRunAtMs": 1774057407139,
+        "lastRunAtMs": 1774057107139,
         "lastRunStatus": "ok",
         "lastStatus": "ok",
-        "lastDurationMs": 35329,
+        "lastDurationMs": 11620,
         "lastDeliveryStatus": "not-delivered",
         "consecutiveErrors": 0,
         "lastDelivered": false

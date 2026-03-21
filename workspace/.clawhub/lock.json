@@ -24,6 +24,10 @@
     "playwright": {
       "version": "1.0.3",
       "installedAt": 1774031522409
+    },
+    "jx76-gog": {
+      "version": "1.0.1",
+      "installedAt": 1774031943291
     }
   }
 }

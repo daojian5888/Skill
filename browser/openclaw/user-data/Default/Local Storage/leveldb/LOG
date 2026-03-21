@@ -1,3 +1,5 @@
-2026/03/20-21:02:37.043 a8d9b Reusing MANIFEST /home/gem/workspace/agent/browser/openclaw/user-data/Default/Local Storage/leveldb/MANIFEST-000001
-2026/03/20-21:02:37.050 a8d9b Recovering log #8
-2026/03/20-21:02:37.051 a8d9b Reusing old log /home/gem/workspace/agent/browser/openclaw/user-data/Default/Local Storage/leveldb/000008.log 
+2026/03/21-02:44:01.247 d488d Reusing MANIFEST /home/gem/workspace/agent/browser/openclaw/user-data/Default/Local Storage/leveldb/MANIFEST-000001
+2026/03/21-02:44:01.253 d488d Recovering log #8
+2026/03/21-02:44:01.254 d488d Level-0 table #11: started
+2026/03/21-02:44:01.257 d488d Level-0 table #11: 43127 bytes OK
+2026/03/21-02:44:01.259 d488d Delete type=0 #8
