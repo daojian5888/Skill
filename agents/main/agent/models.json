@@ -2,10 +2,10 @@
   "providers": {
     "miaoda": {
       "baseUrl": "https://innerapi.aiforce.cloud/innerapi/api/v1/sgw/model/proxy",
-      "apiKey": "secretref-managed",
+      "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxMzY3MzE0NDAyX2FwcF80anB0OTd4MGRnbTRtX3ByZXZpZXciLCJleHAiOjE3NzQ4NjgyMzgsIm5iZiI6MTc3NDc4MTgzOCwiaWF0IjoxNzc0NzgxODM4LCJqdGkiOiI5NGM0MTRjZi03YjQwLWZmMjItMWM4ZS0xNTNhMGI2NDZhMzMiLCJ0ZW5hbnRfaWQiOjEzNjczMTQ0MDIsInVzZXJfaWQiOjE4NTY3MDIwMjM1MTk0MTUsImFwcF9pZCI6ImFwcF80anB0OTd4MGRnbTRtIiwiYXBwX2VudiI6InByZXZpZXciLCJhY2Nlc3Nfa2V5IjoiMTM2NzMxNDQwMl9hcHBfNGpwdDk3eDBkZ200bV9wcmV2aWV3Iiwic2FuZGJveF9pZCI6IjE4NTkzOTI0Njc4ODgxNTIifQ.JOm5SM-uON1r1B1E5xenTW-cke6VqkrApVUj_81zmKc",
       "api": "openai-completions",
       "headers": {
-        "x-api-key": "secretref-managed"
+        "x-api-key": "1367314402_app_4jpt97x0dgm4m_preview"
       },
       "models": [
         {
@@ -47,7 +47,7 @@
     },
     "minimax": {
       "baseUrl": "https://api.minimaxi.com/anthropic",
-      "apiKey": "secretref-managed",
+      "apiKey": "sk-cp-10tZGZEn-2pD29XEFHdPT-VGkAngLBbZoRS7Bvm0LrT_7X04O-IsY19u2EhxV_u8qM-j1p3AHEzelbxpn77IxuF27eyDX1FUAi0gqi4L2W8X1CoyFyGna-c",
       "api": "anthropic-messages",
       "authHeader": true,
       "models": [
@@ -89,7 +89,7 @@
     },
     "gemini": {
       "baseUrl": "https://api.nextaicore.com/v1",
-      "apiKey": "secretref-managed",
+      "apiKey": "sk-HzLN4qaAW2Q4ehrGhHvjawgHj9Nb1yi0yZZZXsFWfFN1081Z",
       "api": "openai-completions",
       "models": [
         {
@@ -168,6 +168,31 @@
         }
       ],
       "apiKey": "minimax-oauth"
+    },
+    "volcengine": {
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "apiKey": "57709065-e328-4f7b-bf19-b719dadcdfca",
+      "api": "openai-completions",
+      "models": [
+        {
+          "id": "doubao-seed-2-0-pro-260215",
+          "name": "豆包2.0",
+          "reasoning": false,
+          "input": [
+            "text",
+            "image"
+          ],
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "contextWindow": 200000,
+          "maxTokens": 32768,
+          "api": "openai-completions"
+        }
+      ]
     }
   }
 }

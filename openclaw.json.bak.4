@@ -1,7 +1,7 @@
 {
   "meta": {
     "lastTouchedVersion": "2026.3.8",
-    "lastTouchedAt": "2026-03-17T16:00:18.385Z"
+    "lastTouchedAt": "2026-03-21T13:39:13.082Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-05T11:15:21.053Z",
@@ -42,11 +42,49 @@
         "source": "file",
         "path": "/home/gem/workspace/.force/openclaw/minimax-api-key",
         "mode": "singleValue"
+      },
+      "gemini-provider": {
+        "source": "file",
+        "path": "/home/gem/.openclaw/secrets/gemini-api-key",
+        "mode": "singleValue"
+      },
+      "doubao-provider": {
+        "source": "file",
+        "path": "/home/gem/workspace/.force/openclaw/doubao-api-key",
+        "mode": "singleValue"
       }
     }
   },
   "models": {
     "providers": {
+      "gemini": {
+        "baseUrl": "https://api.nextaicore.com/v1",
+        "apiKey": {
+          "source": "file",
+          "provider": "gemini-provider",
+          "id": "value"
+        },
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "gemini-3-pro-preview",
+            "name": "Gemini 3 Pro Preview",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
+          }
+        ]
+      },
       "miaoda": {
         "baseUrl": "https://innerapi.aiforce.cloud/innerapi/api/v1/sgw/model/proxy",
         "apiKey": {
@@ -99,13 +137,14 @@
         ]
       },
       "minimax": {
-        "api": "anthropic-messages",
         "baseUrl": "https://api.minimaxi.com/anthropic",
         "apiKey": {
           "source": "file",
           "provider": "minimax-provider",
           "id": "value"
         },
+        "api": "anthropic-messages",
+        "authHeader": true,
         "models": [
           {
             "id": "MiniMax-M2.5",
@@ -122,6 +161,50 @@
             },
             "contextWindow": 200000,
             "maxTokens": 8192
+          },
+          {
+            "id": "MiniMax-M2.7",
+            "name": "MiniMax M2.7",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0.3,
+              "output": 1.2,
+              "cacheRead": 0.03,
+              "cacheWrite": 0.12
+            },
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
+      },
+      "volcengine": {
+        "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+        "apiKey": {
+          "source": "file",
+          "provider": "doubao-provider",
+          "id": "value"
+        },
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "doubao-seed-2-0-pro-260215",
+            "name": "豆包2.0",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 200000,
+            "maxTokens": 32768
           }
         ]
       }
@@ -130,7 +213,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "minimax/MiniMax-M2.5"
+        "primary": "miaoda/miaoda-model-auto"
       },
       "imageModel": "miaoda/miaoda-auto-multimodal",
       "models": {
@@ -139,6 +222,9 @@
         },
         "miaoda/miaoda-auto-multimodal": {
           "alias": "Miaoda Multimodal"
+        },
+        "volcengine/doubao-seed-2-0-pro-260215": {
+          "alias": "豆包2.0"
         }
       },
       "workspace": "/home/gem/workspace/agent/workspace",
@@ -179,8 +265,6 @@
       "feishu_doc_comments",
       "feishu_doc_media",
       "feishu_drive_file",
-      "feishu_wiki_space",
-      "feishu_wiki_space_node",
       "feishu_sheet"
     ],
     "sessions": {
@@ -220,7 +304,8 @@
       "footer": {
         "elapsed": true,
         "status": true
-      }
+      },
+      "botName": "道简网络总经理助理"
     }
   },
   "discovery": {
@@ -231,7 +316,7 @@
   "gateway": {
     "port": 18789,
     "mode": "local",
-    "bind": "loopback",
+    "bind": "lan",
     "controlUi": {
       "allowedOrigins": [
         "https://qddaojian-app_4jpt97x0dgm4m-1859392467888152.aiforce.run"
@@ -384,7 +469,8 @@
       "feishu-greeting",
       "miaoda-keepalive",
       "feishu-openclaw-plugin",
-      "minimax-portal-auth"
+      "minimax-portal-auth",
+      "feishu"
     ],
     "entries": {
       "feishu": {

@@ -39,6 +39,16 @@
    - 记录做得好和需要改进的地方
    - 更新 MEMORY.md
 
+## 每周记忆维护
+
+读取 `memory/heartbeat-state.json`，检查 `lastMemoryMaintenance` 字段。如果距今 >= 7天：
+
+1. 读最近7天的 `memory/YYYY-MM-DD.md` 日志
+2. 提炼有价值的信息到 `memory/projects.md` 或 `memory/lessons.md`
+3. 压缩已完成一次性任务的日志为一行结论
+4. 删除过期信息
+5. 更新 `heartbeat-state.json` 的 `lastMemoryMaintenance` 为今天
+
 ---
 
 ## 触发条件
