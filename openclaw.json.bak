@@ -1,7 +1,7 @@
 {
   "meta": {
-    "lastTouchedVersion": "2026.3.8",
-    "lastTouchedAt": "2026-03-29T12:51:27.257Z"
+    "lastTouchedVersion": "2026.3.13",
+    "lastTouchedAt": "2026-04-03T05:21:13.813Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-05T11:15:21.053Z",
@@ -331,6 +331,7 @@
     "bind": "lan",
     "controlUi": {
       "allowedOrigins": [
+        "https://miaoda.feishu.cn",
         "https://qddaojian-app_4jpt97x0dgm4m-1859392467888152.aiforce.run"
       ],
       "dangerouslyDisableDeviceAuth": true
@@ -478,7 +479,6 @@
   },
   "plugins": {
     "allow": [
-      "miaoda-keepalive",
       "feishu-openclaw-plugin",
       "minimax-portal-auth",
       "feishu",
@@ -488,10 +488,6 @@
     "entries": {
       "feishu": {
         "enabled": false
-      },
-      "miaoda-keepalive": {
-        "enabled": true,
-        "config": {}
       },
       "feishu-openclaw-plugin": {
         "enabled": true
@@ -528,10 +524,6 @@
         "resolvedAt": "2026-03-12T09:26:40.574Z",
         "installedAt": "2026-03-12T09:26:43.207Z"
       },
-      "miaoda-keepalive": {
-        "source": "path",
-        "installPath": "./extensions/miaoda-keepalive"
-      },
       "openclaw-weixin": {
         "source": "npm",
         "spec": "@tencent-weixin/openclaw-weixin",
@@ -547,16 +539,16 @@
       },
       "openclaw-extension-miaoda": {
         "source": "npm",
-        "spec": "@lark-apaas/openclaw-extension-miaoda@1.0.2",
+        "spec": "@lark-apaas/openclaw-extension-miaoda",
         "installPath": "/home/gem/workspace/agent/extensions/openclaw-extension-miaoda",
-        "version": "1.0.2",
+        "version": "1.0.4",
         "resolvedName": "@lark-apaas/openclaw-extension-miaoda",
-        "resolvedVersion": "1.0.2",
-        "resolvedSpec": "@lark-apaas/openclaw-extension-miaoda@1.0.2",
-        "integrity": "sha512-RPeRfMsyk6JRAwdUgVcblxxgPxgcnixKQU850qKcRPEaWIEAM8K6lT+BnoaE8J9vy/ERBhDr1yZFugIFHlDlTw==",
-        "shasum": "b7357c506df0b3826826de48e0ad7c285013fd3a",
-        "resolvedAt": "2026-03-29T12:51:18.825Z",
-        "installedAt": "2026-03-29T12:51:18.840Z"
+        "resolvedVersion": "1.0.4",
+        "resolvedSpec": "@lark-apaas/openclaw-extension-miaoda@1.0.4",
+        "integrity": "sha512-FuvMO7y1PtWCGy5r/UtDL1+oUCqg/b5YRoGNDGQ33gMThhuqgeox87579hB0Evih5LHaaadJk2NjZNBWT60Ong==",
+        "shasum": "96a1718f0250326431fec033f219c76987b59229",
+        "resolvedAt": "2026-04-03T05:21:13.666Z",
+        "installedAt": "2026-04-03T05:21:13.804Z"
       }
     }
   }

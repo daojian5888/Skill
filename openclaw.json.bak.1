@@ -1,7 +1,7 @@
 {
   "meta": {
     "lastTouchedVersion": "2026.3.8",
-    "lastTouchedAt": "2026-03-29T12:51:22.650Z"
+    "lastTouchedAt": "2026-04-03T05:21:04.263Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-05T11:15:21.053Z",
@@ -331,6 +331,7 @@
     "bind": "lan",
     "controlUi": {
       "allowedOrigins": [
+        "https://miaoda.feishu.cn",
         "https://qddaojian-app_4jpt97x0dgm4m-1859392467888152.aiforce.run"
       ],
       "dangerouslyDisableDeviceAuth": true
@@ -478,8 +479,6 @@
   },
   "plugins": {
     "allow": [
-      "feishu-greeting",
-      "miaoda-keepalive",
       "feishu-openclaw-plugin",
       "minimax-portal-auth",
       "feishu",
@@ -489,19 +488,6 @@
     "entries": {
       "feishu": {
         "enabled": false
-      },
-      "feishu-greeting": {
-        "enabled": true,
-        "config": {
-          "message": "👋 Hi，我是**姚霖的助手**，一只生活在飞书里的 🦞 小龙虾，我已准备就绪，并学习了[如何使用飞书](https://bytedance.larkoffice.com/docx/MFK7dDFLFoVlOGxWCv5cTXKmnMh)，有什么需要帮忙的随时说~",
-          "targets": [
-            "ou_d75c71eb9cc3369175d62f2892cd7b8b"
-          ]
-        }
-      },
-      "miaoda-keepalive": {
-        "enabled": true,
-        "config": {}
       },
       "feishu-openclaw-plugin": {
         "enabled": true
@@ -538,14 +524,6 @@
         "resolvedAt": "2026-03-12T09:26:40.574Z",
         "installedAt": "2026-03-12T09:26:43.207Z"
       },
-      "feishu-greeting": {
-        "source": "path",
-        "installPath": "./extensions/feishu-greeting"
-      },
-      "miaoda-keepalive": {
-        "source": "path",
-        "installPath": "./extensions/miaoda-keepalive"
-      },
       "openclaw-weixin": {
         "source": "npm",
         "spec": "@tencent-weixin/openclaw-weixin",
@@ -561,7 +539,7 @@
       },
       "openclaw-extension-miaoda": {
         "source": "npm",
-        "spec": "@lark-apaas/openclaw-extension-miaoda@1.0.2",
+        "spec": "@lark-apaas/openclaw-extension-miaoda",
         "installPath": "/home/gem/workspace/agent/extensions/openclaw-extension-miaoda",
         "version": "1.0.2",
         "resolvedName": "@lark-apaas/openclaw-extension-miaoda",
