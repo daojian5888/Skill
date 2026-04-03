@@ -1,7 +1,7 @@
 {
   "meta": {
-    "lastTouchedVersion": "2026.3.13",
-    "lastTouchedAt": "2026-03-23T00:26:25.536Z"
+    "lastTouchedVersion": "2026.3.8",
+    "lastTouchedAt": "2026-03-29T12:51:21.110Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-05T11:15:21.053Z",
@@ -215,7 +215,10 @@
       "model": {
         "primary": "minimax/MiniMax-M2.7"
       },
-      "imageModel": "miaoda/miaoda-auto-multimodal",
+      "imageModel": {
+        "primary": "gemini/gemini-3-pro-preview",
+        "fallbacks": []
+      },
       "models": {
         "miaoda/miaoda-model-auto": {
           "alias": "Miaoda Auto"
@@ -231,12 +234,18 @@
       "workspace": "/home/gem/workspace/agent/workspace",
       "compaction": {
         "mode": "safeguard",
-        "reserveTokensFloor": 50000
+        "reserveTokensFloor": 20000,
+        "memoryFlush": {
+          "enabled": true,
+          "softThresholdTokens": 4000
+        }
       },
       "verboseDefault": "off",
+      "blockStreamingDefault": "on",
+      "blockStreamingBreak": "text_end",
       "blockStreamingCoalesce": {
-        "minChars": 20,
-        "maxChars": 800,
+        "minChars": 200,
+        "maxChars": 1500,
         "idleMs": 300
       },
       "humanDelay": {
@@ -273,7 +282,8 @@
     }
   },
   "messages": {
-    "ackReactionScope": "group-mentions"
+    "ackReaction": "👀",
+    "ackReactionScope": "all"
   },
   "commands": {
     "native": "auto",
@@ -306,7 +316,8 @@
         "elapsed": true,
         "status": true
       },
-      "botName": "道简网络总经理助理"
+      "botName": "道简网络总经理助理",
+      "ackReaction": "👀"
     }
   },
   "discovery": {
@@ -472,7 +483,8 @@
       "feishu-openclaw-plugin",
       "minimax-portal-auth",
       "feishu",
-      "openclaw-weixin"
+      "openclaw-weixin",
+      "openclaw-extension-miaoda"
     ],
     "entries": {
       "feishu": {
@@ -499,6 +511,14 @@
       },
       "openclaw-weixin": {
         "enabled": true
+      },
+      "openclaw-extension-miaoda": {
+        "enabled": true,
+        "config": {
+          "greeting": {
+            "message": "👋 Hi，我是**姚霖的助手**，一只生活在飞书里的 🦞 小龙虾，我已准备就绪，并学习了[如何使用飞书](https://bytedance.larkoffice.com/docx/MFK7dDFLFoVlOGxWCv5cTXKmnMh)，有什么需要帮忙的随时说~"
+          }
+        }
       }
     },
     "installs": {
@@ -535,6 +555,19 @@
         "shasum": "244baf0a873683a9c350d0f0b5bc055c07b0eb39",
         "resolvedAt": "2026-03-23T00:26:13.515Z",
         "installedAt": "2026-03-23T00:26:23.951Z"
+      },
+      "openclaw-extension-miaoda": {
+        "source": "npm",
+        "spec": "@lark-apaas/openclaw-extension-miaoda@1.0.2",
+        "installPath": "/home/gem/workspace/agent/extensions/openclaw-extension-miaoda",
+        "version": "1.0.2",
+        "resolvedName": "@lark-apaas/openclaw-extension-miaoda",
+        "resolvedVersion": "1.0.2",
+        "resolvedSpec": "@lark-apaas/openclaw-extension-miaoda@1.0.2",
+        "integrity": "sha512-RPeRfMsyk6JRAwdUgVcblxxgPxgcnixKQU850qKcRPEaWIEAM8K6lT+BnoaE8J9vy/ERBhDr1yZFugIFHlDlTw==",
+        "shasum": "b7357c506df0b3826826de48e0ad7c285013fd3a",
+        "resolvedAt": "2026-03-29T12:51:18.825Z",
+        "installedAt": "2026-03-29T12:51:18.840Z"
       }
     }
   }

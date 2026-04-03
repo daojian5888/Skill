@@ -1,7 +1,7 @@
 {
   "meta": {
     "lastTouchedVersion": "2026.3.8",
-    "lastTouchedAt": "2026-03-23T16:04:46.753Z"
+    "lastTouchedAt": "2026-03-29T12:51:33.321Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-05T11:15:21.053Z",
@@ -331,6 +331,7 @@
     "bind": "lan",
     "controlUi": {
       "allowedOrigins": [
+        "https://miaoda.feishu.cn",
         "https://qddaojian-app_4jpt97x0dgm4m-1859392467888152.aiforce.run"
       ],
       "dangerouslyDisableDeviceAuth": true
@@ -478,29 +479,15 @@
   },
   "plugins": {
     "allow": [
-      "feishu-greeting",
-      "miaoda-keepalive",
       "feishu-openclaw-plugin",
       "minimax-portal-auth",
       "feishu",
-      "openclaw-weixin"
+      "openclaw-weixin",
+      "openclaw-extension-miaoda"
     ],
     "entries": {
       "feishu": {
         "enabled": false
-      },
-      "feishu-greeting": {
-        "enabled": true,
-        "config": {
-          "message": "👋 Hi，我是**姚霖的助手**，一只生活在飞书里的 🦞 小龙虾，我已准备就绪，并学习了[如何使用飞书](https://bytedance.larkoffice.com/docx/MFK7dDFLFoVlOGxWCv5cTXKmnMh)，有什么需要帮忙的随时说~",
-          "targets": [
-            "ou_d75c71eb9cc3369175d62f2892cd7b8b"
-          ]
-        }
-      },
-      "miaoda-keepalive": {
-        "enabled": true,
-        "config": {}
       },
       "feishu-openclaw-plugin": {
         "enabled": true
@@ -510,6 +497,17 @@
       },
       "openclaw-weixin": {
         "enabled": true
+      },
+      "openclaw-extension-miaoda": {
+        "enabled": true,
+        "config": {
+          "greeting": {
+            "message": "👋 Hi，我是**姚霖的助手**，一只生活在飞书里的 🦞 小龙虾，我已准备就绪，并学习了[如何使用飞书](https://bytedance.larkoffice.com/docx/MFK7dDFLFoVlOGxWCv5cTXKmnMh)，有什么需要帮忙的随时说~",
+            "targets": [
+              "ou_d75c71eb9cc3369175d62f2892cd7b8b"
+            ]
+          }
+        }
       }
     },
     "installs": {
@@ -526,14 +524,6 @@
         "resolvedAt": "2026-03-12T09:26:40.574Z",
         "installedAt": "2026-03-12T09:26:43.207Z"
       },
-      "feishu-greeting": {
-        "source": "path",
-        "installPath": "./extensions/feishu-greeting"
-      },
-      "miaoda-keepalive": {
-        "source": "path",
-        "installPath": "./extensions/miaoda-keepalive"
-      },
       "openclaw-weixin": {
         "source": "npm",
         "spec": "@tencent-weixin/openclaw-weixin",
@@ -546,6 +536,19 @@
         "shasum": "244baf0a873683a9c350d0f0b5bc055c07b0eb39",
         "resolvedAt": "2026-03-23T00:26:13.515Z",
         "installedAt": "2026-03-23T00:26:23.951Z"
+      },
+      "openclaw-extension-miaoda": {
+        "source": "npm",
+        "spec": "@lark-apaas/openclaw-extension-miaoda@1.0.2",
+        "installPath": "/home/gem/workspace/agent/extensions/openclaw-extension-miaoda",
+        "version": "1.0.2",
+        "resolvedName": "@lark-apaas/openclaw-extension-miaoda",
+        "resolvedVersion": "1.0.2",
+        "resolvedSpec": "@lark-apaas/openclaw-extension-miaoda@1.0.2",
+        "integrity": "sha512-RPeRfMsyk6JRAwdUgVcblxxgPxgcnixKQU850qKcRPEaWIEAM8K6lT+BnoaE8J9vy/ERBhDr1yZFugIFHlDlTw==",
+        "shasum": "b7357c506df0b3826826de48e0ad7c285013fd3a",
+        "resolvedAt": "2026-03-29T12:51:18.825Z",
+        "installedAt": "2026-03-29T12:51:18.840Z"
       }
     }
   }
