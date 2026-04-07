@@ -1,0 +1,4 @@
+interface:
+  display_name: "Swimlane Diagram"
+  short_description: "Generate polished SVG swimlane diagrams."
+  default_prompt: "Use $swimlane-diagram to turn this workflow into a polished SVG swimlane diagram instead of Mermaid."
