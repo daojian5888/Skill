@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="564" height="882" viewBox="0 0 564 882">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#334155"/></marker></defs>
+<rect width="564" height="882" fill="#ffffff"/>
+<text x="282.0" y="22" text-anchor="middle" font-size="18" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="700" fill="#111827">
+01 线索管理泳道图
+</text>
+<rect x="42" y="34" width="240" height="66" fill="#f3f4f6" stroke="#334155" stroke-width="1.5"/>
+<rect x="42" y="100" width="240" height="756" fill="#fbfcfd" stroke="#334155" stroke-width="1.1"/>
+<text x="162.0" y="72" text-anchor="middle" font-size="16" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="600" fill="#111827">
+市场/内容团队
+</text>
+<rect x="282" y="34" width="240" height="66" fill="#f3f4f6" stroke="#334155" stroke-width="1.5"/>
+<rect x="282" y="100" width="240" height="756" fill="#ffffff" stroke="#334155" stroke-width="1.1"/>
+<text x="402.0" y="72" text-anchor="middle" font-size="16" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="600" fill="#111827">
+销售主管
+</text>
+<rect x="79.0" y="134" width="166" height="48" rx="24" ry="24" fill="#eef2f7" stroke="#334155" stroke-width="1.8"/>
+<text x="162.0" y="165" text-anchor="middle" font-size="16" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="600" fill="#1f2937">
+开始
+</text>
+<rect x="79.0" y="222" width="166" height="68" rx="16" ry="16" fill="#dce6f2" stroke="#334155" stroke-width="1.8"/>
+<circle cx="97.0" cy="240" r="14" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+<text x="97.0" y="245" text-anchor="middle" font-size="12" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="700" fill="#1f2937">
+1
+</text>
+<text x="170.0" y="261.0" text-anchor="middle" font-size="14" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="500" fill="#1f2937">
+线索采集
+</text>
+<line x1="162.0" y1="182" x2="162.0" y2="222" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="319.0" y="332" width="166" height="68" rx="16" ry="16" fill="#dce6f2" stroke="#334155" stroke-width="1.8"/>
+<circle cx="337.0" cy="350" r="14" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+<text x="337.0" y="355" text-anchor="middle" font-size="12" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="700" fill="#1f2937">
+2
+</text>
+<text x="410.0" y="371.0" text-anchor="middle" font-size="14" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="500" fill="#1f2937">
+清洗评分
+</text>
+<line x1="162.0" y1="290" x2="162.0" y2="308" stroke="#334155" stroke-width="1.8"/>
+<line x1="162.0" y1="308" x2="402.0" y2="308" stroke="#334155" stroke-width="1.8"/>
+<line x1="402.0" y1="308" x2="402.0" y2="332" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="319.0" y="442" width="166" height="68" rx="16" ry="16" fill="#dce6f2" stroke="#334155" stroke-width="1.8"/>
+<circle cx="337.0" cy="460" r="14" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+<text x="337.0" y="465" text-anchor="middle" font-size="12" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="700" fill="#1f2937">
+3
+</text>
+<text x="410.0" y="481.0" text-anchor="middle" font-size="14" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="500" fill="#1f2937">
+分配跟进
+</text>
+<line x1="402.0" y1="400" x2="402.0" y2="442" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="319.0" y="552" width="166" height="68" rx="16" ry="16" fill="#dce6f2" stroke="#334155" stroke-width="1.8"/>
+<circle cx="337.0" cy="570" r="14" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+<text x="337.0" y="575" text-anchor="middle" font-size="12" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="700" fill="#1f2937">
+4
+</text>
+<text x="410.0" y="591.0" text-anchor="middle" font-size="14" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="500" fill="#1f2937">
+培育转化
+</text>
+<line x1="402.0" y1="510" x2="402.0" y2="552" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="319.0" y="662" width="166" height="68" rx="16" ry="16" fill="#dce6f2" stroke="#334155" stroke-width="1.8"/>
+<circle cx="337.0" cy="680" r="14" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+<text x="337.0" y="685" text-anchor="middle" font-size="12" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="700" fill="#1f2937">
+5
+</text>
+<text x="410.0" y="701.0" text-anchor="middle" font-size="14" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="500" fill="#1f2937">
+渠道复盘
+</text>
+<line x1="402.0" y1="620" x2="402.0" y2="662" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="319.0" y="772" width="166" height="48" rx="24" ry="24" fill="#eef2f7" stroke="#334155" stroke-width="1.8"/>
+<text x="402.0" y="803" text-anchor="middle" font-size="16" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="600" fill="#1f2937">
+结束
+</text>
+<line x1="402.0" y1="730" x2="402.0" y2="772" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="282.0" y="864" text-anchor="middle" font-size="12" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-weight="400" fill="#6b7280">
+依据流程说明文件子表自动生成
+</text>
+</svg>
